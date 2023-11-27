@@ -20,20 +20,41 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     Output: None
     """
 
+
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frame = None
+    video = cv2.VideoCapture(file_path)
+    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    fps = video.get(cv2.CAP_PROP_FPS)
 
-    # TODO: Implement actual algorithms for Localizing Plates
-    Localization.plate_detection(frame)
+    # Initialize variables for saving results
+    plate_data = []
 
-    # TODO: Implement actual algorithms for Recognizing Characters
+    while True:
+        # Capture frame
+        ret, frame = video.read()
 
-    output = open(save_path, "w")
-    output.write("License plate,Frame no.,Timestamp(seconds)\n")
+        # Break the loop if the video has ended
+        if not ret:
+            break
 
-    # TODO: REMOVE THESE (below) and write the actual values in `output`
-    output.write("XS-NB-23,34,1.822\n")
-    # output.write("YOUR,STUFF,HERE\n")
-    # TODO: REMOVE THESE (above) and write the actual values in `output`
+        # Record frame number and timestamp
+        frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
+        timestamp = frame_number / fps
 
-    pass
+        # TODO: Implement actual algorithms for Localizing Plates
+        # The plate_detection function should return the coordinates of detected plates
+        plate = Localization.plate_detection(frame)
+
+        # TODO: Implement actual algorithms for Recognizing Characters
+        # The segment_and_recognize function should return the recognized license plate text
+        if plate:
+            plate_text = Recognize.segment_and_recognize(plate)
+            plate_data.append([plate_text, frame_number, timestamp])
+
+    # Save the results to a CSV file using pandas
+    columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
+    df = pd.DataFrame(plate_data, columns=columns)
+    df.to_csv(save_path, index=False)
+
+    # Release the video capture object
+    video.release()

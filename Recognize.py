@@ -20,5 +20,4 @@ def segment_and_recognize(plate_images):
 		You may need to define other functions.
 	"""
 
-	recognized_plates = [None, None, None]
-	return recognized_plates
+	return "test"
