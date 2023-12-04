@@ -47,9 +47,8 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
-        if plate:
-            plate_text = Recognize.segment_and_recognize(plate)
-            plate_data.append([plate_text, frame_number, timestamp])
+        plate_text = Recognize.segment_and_recognize(plate)
+        plate_data.append([plate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
