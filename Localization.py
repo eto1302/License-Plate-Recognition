@@ -20,6 +20,5 @@ def plate_detection(image):
     """
 
     # TODO: Replace the below lines with your code.
-    plate_images = [image, image, image]
-    return plate_images
+    return [0,0]
 
