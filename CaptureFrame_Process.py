@@ -25,15 +25,15 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     video = cv2.VideoCapture(file_path)
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Initialize variables for saving results
+    
+    # List to store the result data (plate_text, frame_number, time_stamp)
     plate_data = []
 
     while True:
         # Capture frame
         ret, frame = video.read()
 
-        # Break the loop if the video has ended
+        # Break the loop if no frame was returned
         if not ret:
             break
 
