@@ -22,27 +22,34 @@ def plate_detection(image):
     # Color segmentation
     # Create mask
     hsi_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsi_image, np.array([0, 100, 100]), np.array([40, 255, 255]))
+    mask = cv2.inRange(hsi_image, np.array([7, 122, 122]), np.array([30, 255, 255]))
 
-    # Improve mask using morphology
-    n8 = np.array([[1, 1, 1],
+    # Improve mask using morphology    
+    n8 = np.array([     [1, 1, 1],
                         [1, 1, 1],
                         [1, 1, 1]], np.uint8)
     
     # Improve the mask using morphological dilation and erosion
+    mask = cv2.erode(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)   
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8) 
     mask = cv2.dilate(mask, n8) 
 
     # Return coordinates
     hsi_image = hsi_image[:, :, 0]
     image_with_mask = np.bitwise_and(hsi_image, mask)
     nonzero_indices = np.argwhere(image_with_mask)
+    
+
+    if(not nonzero_indices.any()):
+        return [0,0,0,0]
 
     top_left = np.min(nonzero_indices, axis=0)
     bottom_right = np.max(nonzero_indices, axis=0)
@@ -52,6 +59,7 @@ def plate_detection(image):
 
     x_max = bottom_right[0]
     y_max = bottom_right[1]
+
 
     coordinates = np.array([x_min, y_min, x_max, y_max])
     return coordinates

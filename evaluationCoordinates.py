@@ -4,7 +4,7 @@ import numpy as np
 import os
 import CaptureFrame_Process
 
-treshold = 0.85
+treshold = 0.30
 
 def get_coordinates():
 	input_folder = "dataset\TrainingSet\Categorie I"
@@ -36,6 +36,7 @@ if __name__ == '__main__':
 	ground_truth = pd.read_csv(args.ground_truth_path)	
 	totalInput = len(student_results['Video name'])
 	correctCoordinates = 0
+	maxIOU = 0
 
 	# For each line in the input list
 	for i in range(totalInput):
@@ -51,11 +52,11 @@ if __name__ == '__main__':
 		gt_y1 = ground_truth['y1'][i]
 		if(student_videoName != gt_videoName):
 			continue
-		
-		x0 = min(student_x0, gt_x0)
-		x1 = max(student_x1, gt_x1)
-		y0 = min(student_y0, gt_y0)
-		y1 = max(student_y1, gt_y1)
+
+		x0 = max(student_x0, gt_x0)
+		x1 = min(student_x1, gt_x1)
+		y0 = max(student_y0, gt_y0)
+		y1 = min(student_y1, gt_y1)
 
 		intersection = max(0, (x1 - x0)) * max(0,(y1 - y0))
 
@@ -64,10 +65,16 @@ if __name__ == '__main__':
 
 		iou = intersection / (student_box + gt_box - intersection + 1e-6)
 
-		print(f"Video: {student_videoName}, IOU: {iou}, Intersection: {intersection}, Student Box: {student_box}, GT Box: {gt_box}")
+		if(iou < treshold):			
+			print(f"Video: {student_videoName}, IOU: {iou}, Intersection: {intersection}, Student Box: {student_box}, GT Box: {gt_box}")
+			print("Student: ", student_x0, student_y0, student_x1, student_y1)
+			print("GT: ", gt_x0, gt_y0, gt_x1, gt_y1)
 
 		if(iou >= treshold):
 			correctCoordinates+=1
+		if(iou > maxIOU):
+			maxIOU = iou
 
 	accuracy = correctCoordinates / totalInput
 	print(f"Accuracy: {accuracy}")
+	print(f"Max IOU: {maxIOU}")
