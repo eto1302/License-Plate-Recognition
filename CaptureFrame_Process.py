@@ -25,15 +25,15 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     video = cv2.VideoCapture(file_path)
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
-    
-    # List to store the result data (plate_text, frame_number, time_stamp)
+
+    # Initialize variables for saving results
     plate_data = []
 
     while True:
         # Capture frame
         ret, frame = video.read()
 
-        # Break the loop if no frame was returned
+        # Break the loop if the video has ended
         if not ret:
             break
 
@@ -47,9 +47,8 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
-        if plate:
-            plate_text = Recognize.segment_and_recognize(plate)
-            plate_data.append([plate_text, frame_number, timestamp])
+        plate_text = Recognize.segment_and_recognize(plate)
+        plate_data.append([plate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
