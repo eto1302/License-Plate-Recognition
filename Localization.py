@@ -31,6 +31,7 @@ def plate_detection(image):
     
     # Improve the mask using morphological dilation and erosion
     mask = cv2.erode(mask, n8)
+    mask = cv2.erode(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
@@ -40,7 +41,8 @@ def plate_detection(image):
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8) 
-    mask = cv2.dilate(mask, n8) 
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
 
     # Return coordinates
     hsi_image = hsi_image[:, :, 0]
