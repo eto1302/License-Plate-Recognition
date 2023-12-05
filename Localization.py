@@ -21,25 +21,37 @@ def plate_detection(image):
 
     # Color segmentation
     # Create mask
-    hsi_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    mask = cv2.inRange(hsi_image, np.array([0, 0, 0]), np.array([40, 200, 255]))
+    hsi_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsi_image, np.array([0, 100, 100]), np.array([40, 255, 255]))
 
     # Improve mask using morphology
-    n8 = np.ones((3, 3), np.uint8)
-    mask = cv2.erode(mask, n8)
+    n8 = np.array([[1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]], np.uint8)
+    
+    # Improve the mask using morphological dilation and erosion
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8) 
 
     # Return coordinates
     hsi_image = hsi_image[:, :, 0]
     image_with_mask = np.bitwise_and(hsi_image, mask)
-    # TODO: make it work for rotated licence plates
-    image_with_mask = np.nonzero(image_with_mask)
-    y = image_with_mask[1]
-    x = image_with_mask[0]
-    y_min = np.argmin(y)
-    y_max = np.argmax(y)
-    x_min = np.argmin(x)
-    x_max = np.argmax(x)
-    coordinates = np.array([x_min, x_max, y_min, y_max])
+    nonzero_indices = np.argwhere(image_with_mask)
+
+    top_left = np.min(nonzero_indices, axis=0)
+    bottom_right = np.max(nonzero_indices, axis=0)
+
+    x_min = top_left[0]
+    y_min = top_left[1]
+
+    x_max = bottom_right[0]
+    y_max = bottom_right[1]
+
+    coordinates = np.array([x_min, y_min, x_max, y_max])
     return coordinates
