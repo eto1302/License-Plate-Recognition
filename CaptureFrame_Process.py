@@ -47,7 +47,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
-
+        
         plate_text = Recognize.segment_and_recognize(plate)
         plate_data.append([plate_text, frame_number, timestamp])
 

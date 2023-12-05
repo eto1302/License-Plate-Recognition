@@ -19,15 +19,10 @@ def plate_detection(image):
         2. You may need to define two ways for localizing plates(yellow or other colors)
     """
 
-<<<<<<< 883e7a45c296d356d88e52f467f001ee562e37ce
     # Color segmentation
     # Create mask
     hsi_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     mask = cv2.inRange(hsi_image, np.array([0, 0, 0]), np.array([40, 200, 255]))
-=======
-    # TODO: Replace the below lines with your code.
-    return image
->>>>>>> dde4381103cf5c7889a6b3006d9b3402118046ad
 
     # Improve mask using morphology
     n8 = np.ones((3, 3), np.uint8)
