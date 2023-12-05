@@ -20,7 +20,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     Output: None
     """
 
-
+    # We use sampling_frequency, based on frames
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
     video = cv2.VideoCapture(file_path)
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -28,6 +28,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # Initialize variables for saving results
     plate_data = []
+    coordinates_data = []
 
     while True:
         # Capture frame
@@ -40,21 +41,43 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         # Record frame number and timestamp
         frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
         timestamp = frame_number / fps
+        print(frame_number - 1)
+        if((frame_number - 1) % sample_frequency != 0): 
+            continue
 
         # TODO: Implement actual algorithms for Localizing Plates
         # The plate_detection function should return the coordinates of detected plates
-        plate = Localization.plate_detection(frame)
+        coordinates = Localization.plate_detection(frame)
+        
+        # Save coordinates to csv
+        file = os.path.basename(file_path)
+        video_name = os.path.splitext(file)[0]
+        coordinates_data.append([1, 1, video_name, coordinates[0], coordinates[1], coordinates[2], coordinates[3]])
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
-        
+        plate = None
         plate_text = Recognize.segment_and_recognize(plate)
         plate_data.append([plate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
-    df = pd.DataFrame(plate_data, columns=columns)
-    df.to_csv(save_path, index=False)
+    coordinateColumns=["#","Category","Video name","x0","y0","x1","y1"]
+    coordinates_df = pd.DataFrame(coordinates_data, columns=coordinateColumns)
+    
+    try:
+        existing_df = pd.read_csv(save_path)
+    except FileNotFoundError:
+        existing_df = pd.DataFrame()
+
+    coordinates_df['#'] = range(existing_df.shape[0] + 1, existing_df.shape[0] + coordinates_df.shape[0] + 1)
+
+    # Concatenate the existing DataFrame and the new DataFrame
+    updated_df = pd.concat([existing_df, coordinates_df])
+
+    # Save the updated DataFrame to the CSV file
+    updated_df.to_csv(save_path, index=False)
+
 
     # Release the video capture object
     video.release()
