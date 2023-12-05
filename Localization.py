@@ -22,7 +22,7 @@ def plate_detection(image):
     # Color segmentation
     # Create mask
     hsi_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsi_image, np.array([7, 122, 122]), np.array([30, 255, 255]))
+    mask = cv2.inRange(hsi_image, np.array([20, 122, 122]), np.array([30, 255, 255]))
 
     # Improve mask using morphology    
     n8 = np.array([     [1, 1, 1],
@@ -30,7 +30,6 @@ def plate_detection(image):
                         [1, 1, 1]], np.uint8)
     
     # Improve the mask using morphological dilation and erosion
-    mask = cv2.erode(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
@@ -39,7 +38,6 @@ def plate_detection(image):
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8) 
     mask = cv2.dilate(mask, n8) 
 
     # Return coordinates
