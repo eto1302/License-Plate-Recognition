@@ -41,7 +41,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         # Record frame number and timestamp
         frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
         timestamp = frame_number / fps
-        print(frame_number - 1)
         if((frame_number - 1) % sample_frequency != 0): 
             continue
 
