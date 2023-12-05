@@ -1,6 +1,38 @@
 import cv2
 import numpy as np
 
+def improveMask(mask):
+    n8 = np.array([     [1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]], np.uint8)
+    n4 = np.array([     [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0]], np.uint8)
+    
+    # Improve the mask using morphological dilation and erosion    
+    mask = cv2.erode(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)   
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)     
+    # Return the improved mask
+    return mask
+
+    # Define a function to create a gaussian kernel
+def gaussianFilter (img, kernelSize, sigma):
+    result = np.zeros((kernelSize, kernelSize), dtype=float)
+    for row in range(kernelSize):
+        for col in range(kernelSize):
+            coeff = 1 / (2 * np.pi * sigma**2)
+            exp = -(row**2 + col**2) / (sigma**2)
+            result[row, col] = coeff * np.exp(exp)
+    result /= np.sum(result)
+    return cv2.filter2D(img, ddepth=-1, kernel=np.array(result))
 
 def plate_detection(image):
     """
@@ -19,35 +51,19 @@ def plate_detection(image):
         2. You may need to define two ways for localizing plates(yellow or other colors)
     """
 
-    # Color segmentation
-    # Create mask
     hsi_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsi_image, np.array([15, 140, 122]), np.array([30, 255, 200]))
+    # hsi_image = gaussianFilter(hsi_image, 3, 2)
+    mask = cv2.inRange(hsi_image, np.array([17, 140, 122]), np.array([30, 255, 200]))
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Improve mask using morphology    
-    n8 = np.array([     [1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1]], np.uint8)
-    
-    # Improve the mask using morphological dilation and erosion
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)   
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8) 
+    mask = improveMask(mask)
 
-    # Return coordinates
     hsi_image = hsi_image[:, :, 0]
     image_with_mask = np.bitwise_and(hsi_image, mask)
     nonzero_indices = np.argwhere(image_with_mask)
-    
 
     if(not nonzero_indices.any()):
-        return [0,0,0,0]
+        return[0,0,0,0]
 
     top_left = np.min(nonzero_indices, axis=0)
     bottom_right = np.max(nonzero_indices, axis=0)
@@ -57,7 +73,6 @@ def plate_detection(image):
 
     x_max = bottom_right[0]
     y_max = bottom_right[1]
-
 
     coordinates = np.array([x_min, y_min, x_max, y_max])
     return coordinates

@@ -4,7 +4,6 @@ import numpy as np
 import os
 import CaptureFrame_Process
 
-treshold = 0.75
 
 def get_coordinates():
 	input_folder = "dataset\TrainingSet\Categorie I"
@@ -23,13 +22,14 @@ def get_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--student_file_path', type=str, default='dataset/OutputCoordinates.csv')
 	parser.add_argument('--ground_truth_path', type=str, default='dataset/groundTruthCoordinates.csv')
+	parser.add_argument('--threshold', type=str, default=0.75)
 	args = parser.parse_args()
 	return args
 
 
 if __name__ == '__main__':
 	args = get_args()
-
+	threshold = float(args.threshold)
 	get_coordinates()
 
 	student_results = pd.read_csv(args.student_file_path)
@@ -65,12 +65,12 @@ if __name__ == '__main__':
 
 		iou = intersection / (student_box + gt_box - intersection + 1e-6)
 
-		if(iou < treshold):			
+		if(iou < threshold):			
 			print(f"Video: {student_videoName}, IOU: {iou}, Intersection: {intersection}, Student Box: {student_box}, GT Box: {gt_box}")
 			print("Student: ", student_x0, student_y0, student_x1, student_y1)
 			print("GT: ", gt_x0, gt_y0, gt_x1, gt_y1)
 
-		if(iou >= treshold):
+		if(iou >= threshold):
 			correctCoordinates+=1
 		if(iou > maxIOU):
 			maxIOU = iou
