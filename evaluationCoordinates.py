@@ -4,7 +4,7 @@ import numpy as np
 import os
 import CaptureFrame_Process
 
-treshold = 0.30
+treshold = 0.75
 
 def get_coordinates():
 	input_folder = "dataset\TrainingSet\Categorie I"
