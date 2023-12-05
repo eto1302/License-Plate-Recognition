@@ -19,6 +19,27 @@ def plate_detection(image):
         2. You may need to define two ways for localizing plates(yellow or other colors)
     """
 
-    # TODO: Replace the below lines with your code.
-    return image
+    # Color segmentation
+    # Create mask
+    hsi_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    mask = cv2.inRange(hsi_image, np.array([0, 0, 0]), np.array([40, 200, 255]))
 
+    # Improve mask using morphology
+    n8 = np.ones((3, 3), np.uint8)
+    mask = cv2.erode(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+
+    # Return coordinates
+    hsi_image = hsi_image[:, :, 0]
+    image_with_mask = np.bitwise_and(hsi_image, mask)
+    # TODO: make it work for rotated licence plates
+    image_with_mask = np.nonzero(image_with_mask)
+    y = image_with_mask[1]
+    x = image_with_mask[0]
+    y_min = np.argmin(y)
+    y_max = np.argmax(y)
+    x_min = np.argmin(x)
+    x_max = np.argmax(x)
+    coordinates = np.array([x_min, x_max, y_min, y_max])
+    return coordinates
