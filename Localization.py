@@ -10,8 +10,8 @@ def improveMask(mask):
                         [0, 1, 0]], np.uint8)
     
     # Improve the mask using morphological dilation and erosion    
-    mask = cv2.erode(mask, n8)
-    mask = cv2.dilate(mask, n8)
+    mask = cv2.erode(mask, n4)  
+    mask = cv2.dilate(mask, n8) 
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)   
