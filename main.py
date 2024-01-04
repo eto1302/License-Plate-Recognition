@@ -2,6 +2,7 @@ import argparse
 import os
 import CaptureFrame_Process
 import numpy
+import sys
 
 
 # define the required arguments: video path(file_path), sample frequency(second), saving path for final result table
@@ -17,6 +18,7 @@ def get_args():
 
 # In this file, you need to pass three arguments into CaptureFrame_Process function.
 if __name__ == '__main__':
+	numpy.set_printoptions(threshold=sys.maxsize)
 	args = get_args()
 	if args.output_path is None:
 		output_path = os.getcwd()

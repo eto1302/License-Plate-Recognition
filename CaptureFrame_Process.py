@@ -1,10 +1,11 @@
 import cv2
 import os
+import sys
+import numpy as np
 import pandas as pd
 import Localization
 import Recognize
-
-
+''
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
     In this file, you will define your own CaptureFrame_Process funtion. In this function,
@@ -47,7 +48,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         # TODO: Implement actual algorithms for Localizing Plates
         # The plate_detection function should return the coordinates of detected plates
         coordinates = Localization.plate_detection(frame)
-        
+
         # Save coordinates to csv
         file = os.path.basename(file_path)
         video_name = os.path.splitext(file)[0]
