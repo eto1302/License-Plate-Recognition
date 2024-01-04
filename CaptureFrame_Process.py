@@ -47,12 +47,13 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Localizing Plates
         # The plate_detection function should return the coordinates of detected plates
-        coordinates = Localization.plate_detection(frame)
+        coordinatesFirst, coordinatesSecond = Localization.plate_detection(frame)
 
         # Save coordinates to csv
         file = os.path.basename(file_path)
         video_name = os.path.splitext(file)[0]
-        coordinates_data.append([1, 1, video_name, coordinates[0], coordinates[1], coordinates[2], coordinates[3]])
+        coordinates_data.append([1, 1, video_name, coordinatesFirst[0], coordinatesFirst[1], coordinatesFirst[2], coordinatesFirst[3],  
+                                 coordinatesSecond[0], coordinatesSecond[1], coordinatesSecond[2], coordinatesSecond[3]])
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
