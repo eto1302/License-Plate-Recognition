@@ -3,6 +3,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+def mostCommonColor(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    pixels = hsv.reshape((-1, 3))
+
+    pixel_tuples = [tuple(pixel) for pixel in pixels]
+
+    unique_pixels, counts = np.unique(pixel_tuples, return_counts=True, axis=0)
+
+    return unique_pixels[np.argmax(counts)]
+
+def rotate_image(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 100)
+    if lines is None:
+        return image
+    dominant_line = lines[0][0]
+    angle = np.degrees(dominant_line[1]) - 90
+    center = tuple(np.array(image.shape[1::-1]) / 2)    
+    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)    
+    rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return rotated_image
+
 def improveMask(mask):
     n8 = np.array([     [1, 1, 1],
                         [1, 1, 1],
@@ -50,7 +74,7 @@ def get_next_filename(folder):
             return filename
         i += 1
 
-def plate_detection(image):
+def twoBiggestPlates(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_yellow = np.array([10, 60, 100])
     upper_yellow = np.array([40, 255, 200])
@@ -95,31 +119,52 @@ def plate_detection(image):
     cropped_image_largest = image[y1:y1 + h1, x1:x1 + w1]
     cropped_image_second_largest = image[y2:y2 + h2, x2:x2 + w2]
 
+    rotated_cropped_largest = rotate_image(cropped_image_largest)
+    rotated_cropped_second_largest = rotate_image(cropped_image_second_largest)
+    return rotated_cropped_largest, rotated_cropped_second_largest
+
+def cropPlate(plate):
+    mostCommon = mostCommonColor(plate)
+
+    hsv = cv2.cvtColor(plate, cv2.COLOR_BGR2HSV)
+    lower = 0.95 * mostCommon
+    upper = 1.05 * mostCommon
+    print(mostCommon, lower, upper)
+
+    mask = cv2.inRange(hsv, lower, upper)
+    mask = improveMask(mask)
+
+    filtered_image = cv2.bitwise_and(plate, plate, mask=mask)
+    filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2RGB)
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:            
+        largest_contour = max(contours, key=cv2.contourArea)
+
+        largest_contour_mask = np.zeros_like(mask)
+        cv2.drawContours(largest_contour_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
+        x1, y1, w1, h1 = cv2.boundingRect(largest_contour)
+    else:
+        x1, y1, w1, h1 = 0,0,1,1
+    return plate[y1 : y1 + h1, x1 : x1 + w1]
+
+def plate_detection(image):
+    first, second = twoBiggestPlates(image)
+    
+    first = cropPlate(first)
+    second = cropPlate(second)
+
     fig, axs = plt.subplots(2, 2, figsize=(20, 8))
 
     axs[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     axs[0, 0].set_title('Original Image')
 
-    axs[0, 1].imshow(cv2.cvtColor(filtered_image, cv2.COLOR_BGR2RGB))
-    axs[0, 1].set_title('Yellow Filtered Image')
-
-    axs[1, 0].imshow(cv2.cvtColor(cropped_image_largest, cv2.COLOR_BGR2RGB))
+    axs[1, 0].imshow(cv2.cvtColor(first, cv2.COLOR_BGR2RGB))
     axs[1, 0].set_title('Largest Cluster')
 
-    axs[1, 1].imshow(cv2.cvtColor(cropped_image_second_largest, cv2.COLOR_BGR2RGB))
+    axs[1, 1].imshow(cv2.cvtColor(second, cv2.COLOR_BGR2RGB))
     axs[1, 1].set_title('Second Largest Cluster')
-
-    # axs[1, 0].hist(image.flatten(), bins=256, color='red', alpha=0.7, rwidth=0.8)
-    # axs[1, 0].set_title('Histogram - Original Image')
-
-    # axs[1, 1].hist(filtered_image.flatten(), bins=256, color='yellow', alpha=0.7, rwidth=0.8)
-    # axs[1, 1].set_title('Histogram - Yellow Filtered Image')
-
-    # axs[1, 2].hist(cropped_image_largest.flatten(), bins=256, color='green', alpha=0.7, rwidth=0.8)
-    # axs[1, 2].set_title('Histogram - Largest Cluster')
-
-    # axs[1, 3].hist(cropped_image_second_largest.flatten(), bins=256, color='blue', alpha=0.7, rwidth=0.8)
-    # axs[1, 3].set_title('Histogram - Second Largest Cluster')
 
     save_path = "LocalizationLogs"
 
@@ -137,4 +182,4 @@ def plate_detection(image):
 
     plt.close()
 
-    return [x1, y1, x1+w1, y1+h1], [x2, y2, x2+w2, y2+h2]
+    return first, second

@@ -42,10 +42,11 @@ def segment_and_recognize(image):
 
 	# filtered_image = cv2.bitwise_and(image, image, mask=mask)
 	# filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2BGR)
-
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
 	# TODO change the coefficient, when the plates are rotated properly
 	threshold = np.mean(greyscaleImage) * 0.75
+
 	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY_INV)
 
 	foreground = improveMask(foreground)
@@ -60,10 +61,10 @@ def segment_and_recognize(image):
 
 	save_path = "SegmentationLogs"
 
-	plt.show(block=False)
+	# plt.show(block=False)
 
-	plt.pause(3)
+	# plt.pause(3)
 
-	plt.close()
+	# plt.close()
 
 	return frameNumber

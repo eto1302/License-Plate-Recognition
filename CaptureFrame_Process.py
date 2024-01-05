@@ -47,30 +47,12 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Localizing Plates
         # The plate_detection function should return the coordinates of detected plates
-        coordinatesFirst, coordinatesSecond = Localization.plate_detection(frame)
-
-        # Save coordinates to csv
-        file = os.path.basename(file_path)
-        video_name = os.path.splitext(file)[0]
-        coordinates_data.append([1, 1, video_name, coordinatesFirst[0], coordinatesFirst[1], coordinatesFirst[2], coordinatesFirst[3],  
-                                 coordinatesSecond[0], coordinatesSecond[1], coordinatesSecond[2], coordinatesSecond[3]])
-
-        # TODO: Implement actual algorithms for Recognizing Characters
-        # The segment_and_recognize function should return the recognized license plate text
-        x1 = coordinatesFirst[0]
-        y1 = coordinatesFirst[1]
-        x2 = coordinatesFirst[2]
-        y2 = coordinatesFirst[3]
-        x3 = coordinatesSecond[0]
-        y3 = coordinatesSecond[1]
-        x4 = coordinatesSecond[2]
-        y4 = coordinatesSecond[3]
-        firstPlate = frame[y1:y2, x1:x2]
-        secondPlate = frame[y3:y4, x3:x4]
-        firstPlate_text = Recognize.segment_and_recognize(firstPlate)
-        plate_data.append([firstPlate_text, frame_number, timestamp])
-        secondPlate_text = Recognize.segment_and_recognize(secondPlate)
-        plate_data.append([secondPlate_text, frame_number, timestamp])
+        firstPlate, secondPlate = Localization.plate_detection(frame)
+        
+        # firstPlate_text = Recognize.segment_and_recognize(firstPlate)
+        # plate_data.append([firstPlate_text, frame_number, timestamp])
+        # secondPlate_text = Recognize.segment_and_recognize(secondPlate)
+        # plate_data.append([secondPlate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
