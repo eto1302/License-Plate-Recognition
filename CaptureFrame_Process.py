@@ -57,9 +57,20 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Recognizing Characters
         # The segment_and_recognize function should return the recognized license plate text
-        plate = None
-        plate_text = Recognize.segment_and_recognize(plate)
-        plate_data.append([plate_text, frame_number, timestamp])
+        x1 = coordinatesFirst[0]
+        y1 = coordinatesFirst[1]
+        x2 = coordinatesFirst[2]
+        y2 = coordinatesFirst[3]
+        x3 = coordinatesSecond[0]
+        y3 = coordinatesSecond[1]
+        x4 = coordinatesSecond[2]
+        y4 = coordinatesSecond[3]
+        firstPlate = frame[y1:y2, x1:x2]
+        secondPlate = frame[y3:y4, x3:x4]
+        firstPlate_text = Recognize.segment_and_recognize(firstPlate)
+        plate_data.append([firstPlate_text, frame_number, timestamp])
+        secondPlate_text = Recognize.segment_and_recognize(secondPlate)
+        plate_data.append([secondPlate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
@@ -78,7 +89,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # Save the updated DataFrame to the CSV file
     updated_df.to_csv(save_path, index=False)
-
 
     # Release the video capture object
     video.release()

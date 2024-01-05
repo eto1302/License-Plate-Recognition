@@ -59,7 +59,7 @@ def plate_detection(image):
     mask = improveMask(mask)
 
     filtered_image = cv2.bitwise_and(image, image, mask=mask)
-    filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2BGR)
+    filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2RGB)
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -92,8 +92,8 @@ def plate_detection(image):
     if secondArea < firstArea * 0.75:
         x2, y2, w2, h2 = 0,0,1,1
 
-    cropped_image_largest = filtered_image[y1:y1 + h1, x1:x1 + w1]
-    cropped_image_second_largest = filtered_image[y2:y2 + h2, x2:x2 + w2]
+    cropped_image_largest = image[y1:y1 + h1, x1:x1 + w1]
+    cropped_image_second_largest = image[y2:y2 + h2, x2:x2 + w2]
 
     fig, axs = plt.subplots(2, 2, figsize=(20, 8))
 
@@ -121,7 +121,7 @@ def plate_detection(image):
     # axs[1, 3].hist(cropped_image_second_largest.flatten(), bins=256, color='blue', alpha=0.7, rwidth=0.8)
     # axs[1, 3].set_title('Histogram - Second Largest Cluster')
 
-    save_path = "logs"
+    save_path = "LocalizationLogs"
 
     if save_path:
         if not os.path.exists(save_path):
