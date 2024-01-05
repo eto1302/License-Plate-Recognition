@@ -8,11 +8,8 @@ def mostCommonColor(image):
 
     pixels = hsv.reshape((-1, 3))
 
-    pixel_tuples = [tuple(pixel) for pixel in pixels]
+    return np.mean(pixels, axis=0).astype(np.uint8)
 
-    unique_pixels, counts = np.unique(pixel_tuples, return_counts=True, axis=0)
-
-    return unique_pixels[np.argmax(counts)]
 
 def rotate_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -127,8 +124,8 @@ def cropPlate(plate):
     mostCommon = mostCommonColor(plate)
 
     hsv = cv2.cvtColor(plate, cv2.COLOR_BGR2HSV)
-    lower = 0.95 * mostCommon
-    upper = 1.05 * mostCommon
+    lower = 0.5 * mostCommon
+    upper = 1.5 * mostCommon
     print(mostCommon, lower, upper)
 
     mask = cv2.inRange(hsv, lower, upper)
@@ -152,8 +149,8 @@ def cropPlate(plate):
 def plate_detection(image):
     first, second = twoBiggestPlates(image)
     
-    first = cropPlate(first)
-    second = cropPlate(second)
+    # first = cropPlate(first)
+    # second = cropPlate(second)
 
     fig, axs = plt.subplots(2, 2, figsize=(20, 8))
 
