@@ -4,11 +4,17 @@ import matplotlib.pyplot as plt
 import os
 
 def mostCommonColor(image):
+    if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
+        return None
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     pixels = hsv.reshape((-1, 3))
 
-    return np.mean(pixels, axis=0).astype(np.uint8)
+    mask = pixels[:, 2] >= 100
+    
+    filtered_pixels = pixels[mask]
+
+    return np.mean(filtered_pixels, axis=0).astype(np.uint8)
 
 
 def rotate_image(image):
@@ -121,36 +127,22 @@ def twoBiggestPlates(image):
     return rotated_cropped_largest, rotated_cropped_second_largest
 
 def cropPlate(plate):
-    mostCommon = mostCommonColor(plate)
+    height, width = plate.shape[:2]
 
-    hsv = cv2.cvtColor(plate, cv2.COLOR_BGR2HSV)
-    lower = 0.5 * mostCommon
-    upper = 1.5 * mostCommon
-    print(mostCommon, lower, upper)
+    top_crop = int(height * 0.2)
+    bottom_crop = int(height * 0.2)
+    left_crop = int(width * 0.1)
+    right_crop = int(width * 0.1)
 
-    mask = cv2.inRange(hsv, lower, upper)
-    mask = improveMask(mask)
+    cropped_image = plate[top_crop:(height - bottom_crop), left_crop:(width - right_crop)]
 
-    filtered_image = cv2.bitwise_and(plate, plate, mask=mask)
-    filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2RGB)
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    if contours:            
-        largest_contour = max(contours, key=cv2.contourArea)
-
-        largest_contour_mask = np.zeros_like(mask)
-        cv2.drawContours(largest_contour_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
-        x1, y1, w1, h1 = cv2.boundingRect(largest_contour)
-    else:
-        x1, y1, w1, h1 = 0,0,1,1
-    return plate[y1 : y1 + h1, x1 : x1 + w1]
+    return cropped_image
 
 def plate_detection(image):
     first, second = twoBiggestPlates(image)
     
-    # first = cropPlate(first)
-    # second = cropPlate(second)
+    first = cropPlate(first)
+    second = cropPlate(second)
 
     fig, axs = plt.subplots(2, 2, figsize=(20, 8))
 

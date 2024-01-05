@@ -10,9 +10,28 @@ def improveMask(mask):
 	n4 = np.array([     [0, 1, 0],
                         [1, 1, 1],
                         [0, 1, 0]], np.uint8)
-	mask = cv2.erode (mask, n4)  
-	mask = cv2.dilate(mask, n8) 
+	mask = cv2.dilate (mask, n4)  
+	mask = cv2.erode(mask, n8)
 	return mask
+
+def get_next_filename(folder):
+	i = 1
+	while True:
+		filename = os.path.join(folder, f"{i}.jpg")
+		if not os.path.exists(filename):
+			print(i)
+			return filename
+		i += 1
+
+
+def cropImage(image):
+    topRows = np.any(image > 200, axis=1)
+    bottomRows = np.any(image[::-1] > 200, axis=1)
+
+    firstRow = np.argmax(topRows)
+    lastRow = len(image) - 1 - np.argmax(bottomRows)
+
+    return image[firstRow:lastRow + 1, :]
 
 def segment_and_recognize(image):
 	"""
@@ -33,38 +52,38 @@ def segment_and_recognize(image):
 	if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
 		return ""
 	frameNumber = ""
-	# hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-	# low_range = np.array([10, 30, 20])
-	# high_range = np.array([80, 255, 120])
-
-	# mask = cv2.inRange(hsv, low_range, high_range)
-	# mask = improveMask(mask)
-
-	# filtered_image = cv2.bitwise_and(image, image, mask=mask)
-	# filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2BGR)
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	# greyscaleImage = cropImage(greyscaleImage)
+	# greyscaleImage = cv2.equalizeHist(greyscaleImage)
+	greyscaleImage = (255 / (np.max(greyscaleImage) - np.min(greyscaleImage))) * (greyscaleImage - np.min(greyscaleImage)) 
 
 	# TODO change the coefficient, when the plates are rotated properly
-	threshold = np.mean(greyscaleImage) * 0.75
+	# print(np.mean(greyscaleImage))
+	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.77 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY_INV)
+
+	threshold = np.mean(greyscaleImage) * 0.8
 
 	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY_INV)
 
 	foreground = improveMask(foreground)
 
-	fig, axs = plt.subplots(2, 2, figsize=(20, 8))
+	fig, axs = plt.subplots(1, 2, figsize=(20, 8))
 
-	axs[0, 0].imshow(cv2.cvtColor(greyscaleImage, cv2.COLOR_BGR2RGB))
-	axs[0, 0].set_title('Original Image')
+	axs[0].imshow(greyscaleImage)
+	axs[0].set_title('Original Image')
 
-	axs[0, 1].imshow(cv2.cvtColor(foreground, cv2.COLOR_BGR2RGB))
-	axs[0, 1].set_title('Foreground Image')
+	axs[1].imshow(foreground)
+	axs[1].set_title('Foreground Image')
 
 	save_path = "SegmentationLogs"
 
-	# plt.show(block=False)
+	if save_path:
+		if not os.path.exists(save_path):
+			os.makedirs(save_path)
+		plt.savefig(get_next_filename(save_path))
+	else:
+		plt.show()
 
-	# plt.pause(3)
-
-	# plt.close()
+	plt.close()
 
 	return frameNumber

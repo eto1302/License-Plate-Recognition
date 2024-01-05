@@ -49,10 +49,10 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         # The plate_detection function should return the coordinates of detected plates
         firstPlate, secondPlate = Localization.plate_detection(frame)
         
-        # firstPlate_text = Recognize.segment_and_recognize(firstPlate)
-        # plate_data.append([firstPlate_text, frame_number, timestamp])
-        # secondPlate_text = Recognize.segment_and_recognize(secondPlate)
-        # plate_data.append([secondPlate_text, frame_number, timestamp])
+        firstPlate_text = Recognize.segment_and_recognize(firstPlate)
+        plate_data.append([firstPlate_text, frame_number, timestamp])
+        secondPlate_text = Recognize.segment_and_recognize(secondPlate)
+        plate_data.append([secondPlate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
