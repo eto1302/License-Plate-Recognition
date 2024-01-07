@@ -1,10 +1,11 @@
 import cv2
 import os
+import sys
+import numpy as np
 import pandas as pd
 import Localization
 import Recognize
-
-
+''
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
     In this file, you will define your own CaptureFrame_Process funtion. In this function,
@@ -46,18 +47,12 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
         # TODO: Implement actual algorithms for Localizing Plates
         # The plate_detection function should return the coordinates of detected plates
-        coordinates = Localization.plate_detection(frame)
+        firstPlate, secondPlate = Localization.plate_detection(frame)
         
-        # Save coordinates to csv
-        file = os.path.basename(file_path)
-        video_name = os.path.splitext(file)[0]
-        coordinates_data.append([1, 1, video_name, coordinates[0], coordinates[1], coordinates[2], coordinates[3]])
-
-        # TODO: Implement actual algorithms for Recognizing Characters
-        # The segment_and_recognize function should return the recognized license plate text
-        plate = None
-        plate_text = Recognize.segment_and_recognize(plate)
-        plate_data.append([plate_text, frame_number, timestamp])
+        firstPlate_text = Recognize.segment_and_recognize(firstPlate)
+        plate_data.append([firstPlate_text, frame_number, timestamp])
+        secondPlate_text = Recognize.segment_and_recognize(secondPlate)
+        plate_data.append([secondPlate_text, frame_number, timestamp])
 
     # Save the results to a CSV file using pandas
     columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
@@ -76,7 +71,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # Save the updated DataFrame to the CSV file
     updated_df.to_csv(save_path, index=False)
-
 
     # Release the video capture object
     video.release()

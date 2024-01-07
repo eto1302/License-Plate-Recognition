@@ -1,5 +1,34 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+def mostCommonColor(image):
+    if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
+        return None
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    pixels = hsv.reshape((-1, 3))
+
+    mask = pixels[:, 2] >= 100
+    
+    filtered_pixels = pixels[mask]
+
+    return np.mean(filtered_pixels, axis=0).astype(np.uint8)
+
+
+def rotate_image(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 100)
+    if lines is None:
+        return image
+    dominant_line = lines[0][0]
+    angle = np.degrees(dominant_line[1]) - 90
+    center = tuple(np.array(image.shape[1::-1]) / 2)    
+    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)    
+    rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return rotated_image
 
 def improveMask(mask):
     n8 = np.array([     [1, 1, 1],
@@ -14,16 +43,22 @@ def improveMask(mask):
     mask = cv2.dilate(mask, n8) 
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)  
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)   
+    mask = cv2.dilate(mask, n8)  
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)     
+    mask = cv2.dilate(mask, n8)    
     # Return the improved mask
     return mask
 
-    # Define a function to create a gaussian kernel
+# Define a function to create a gaussian kernel
 def gaussianFilter (img, kernelSize, sigma):
     result = np.zeros((kernelSize, kernelSize), dtype=float)
     for row in range(kernelSize):
@@ -34,45 +69,106 @@ def gaussianFilter (img, kernelSize, sigma):
     result /= np.sum(result)
     return cv2.filter2D(img, ddepth=-1, kernel=np.array(result))
 
-def plate_detection(image):
-    """
-    In this file, you need to define plate_detection function.
-    To do:
-        1. Localize the plates and crop the plates
-        2. Adjust the cropped plate images
-    Inputs:(One)
-        1. image: captured frame in CaptureFrame_Process.CaptureFrame_Process function
-        type: Numpy array (imread by OpenCV package)
-    Outputs:(One)
-        1. plate_imgs: cropped and adjusted plate images
-        type: list, each element in 'plate_imgs' is the cropped image(Numpy array)
-    Hints:
-        1. You may need to define other functions, such as crop and adjust function
-        2. You may need to define two ways for localizing plates(yellow or other colors)
-    """
+def get_next_filename(folder):
+    i = 1
+    while True:
+        filename = os.path.join(folder, f"{i}.jpg")
+        if not os.path.exists(filename):
+            return filename
+        i += 1
 
-    hsi_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    # hsi_image = gaussianFilter(hsi_image, 3, 2)
-    mask = cv2.inRange(hsi_image, np.array([17, 140, 122]), np.array([30, 255, 200]))
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+def twoBiggestPlates(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_yellow = np.array([10, 60, 100])
+    upper_yellow = np.array([40, 255, 200])
 
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
     mask = improveMask(mask)
 
-    hsi_image = hsi_image[:, :, 0]
-    image_with_mask = np.bitwise_and(hsi_image, mask)
-    nonzero_indices = np.argwhere(image_with_mask)
+    filtered_image = cv2.bitwise_and(image, image, mask=mask)
+    filtered_image = cv2.cvtColor(filtered_image, cv2.COLOR_HSV2RGB)
 
-    if(not nonzero_indices.any()):
-        return[0,0,0,0]
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    top_left = np.min(nonzero_indices, axis=0)
-    bottom_right = np.max(nonzero_indices, axis=0)
+    if contours:            
+        largest_contour = max(contours, key=cv2.contourArea)
 
-    x_min = top_left[0]
-    y_min = top_left[1]
+        largest_contour_mask = np.zeros_like(mask)
+        cv2.drawContours(largest_contour_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
+        x1, y1, w1, h1 = cv2.boundingRect(largest_contour)
+        x2, y2, w2, h2 = 0,0,1,1
 
-    x_max = bottom_right[0]
-    y_max = bottom_right[1]
+        mask_without_largest = cv2.bitwise_xor(mask, largest_contour_mask)
+        contours, _ = cv2.findContours(mask_without_largest, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            second_largest_contour = max(contours, key=cv2.contourArea)
 
-    coordinates = np.array([x_min, y_min, x_max, y_max])
-    return coordinates
+            second_largest_contour_mask = np.zeros_like(mask)
+            cv2.drawContours(second_largest_contour_mask, [second_largest_contour], -1, 255, thickness=cv2.FILLED)
+
+            x2, y2, w2, h2 = cv2.boundingRect(second_largest_contour)
+    else:
+        x1, y1, w1, h1 = 0,0,1,1
+        x2, y2, w2, h2 = 0,0,1,1
+
+    firstArea = w1 * h1
+    secondArea = w2 * h2
+
+    if firstArea < 100:        
+        x1, y1, w1, h1 = 0,0,1,1
+    if secondArea < firstArea * 0.75:
+        x2, y2, w2, h2 = 0,0,1,1
+
+    cropped_image_largest = image[y1:y1 + h1, x1:x1 + w1]
+    cropped_image_second_largest = image[y2:y2 + h2, x2:x2 + w2]
+
+    rotated_cropped_largest = rotate_image(cropped_image_largest)
+    rotated_cropped_second_largest = rotate_image(cropped_image_second_largest)
+    return rotated_cropped_largest, rotated_cropped_second_largest
+
+def cropPlate(plate):
+    height, width = plate.shape[:2]
+
+    top_crop = int(height * 0.2)
+    bottom_crop = int(height * 0.2)
+    left_crop = int(width * 0.1)
+    right_crop = int(width * 0.1)
+
+    cropped_image = plate[top_crop:(height - bottom_crop), left_crop:(width - right_crop)]
+
+    return cropped_image
+
+def plate_detection(image):
+    first, second = twoBiggestPlates(image)
+    
+    first = cropPlate(first)
+    second = cropPlate(second)
+
+    fig, axs = plt.subplots(2, 2, figsize=(20, 8))
+
+    axs[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    axs[0, 0].set_title('Original Image')
+
+    axs[1, 0].imshow(cv2.cvtColor(first, cv2.COLOR_BGR2RGB))
+    axs[1, 0].set_title('Largest Cluster')
+
+    axs[1, 1].imshow(cv2.cvtColor(second, cv2.COLOR_BGR2RGB))
+    axs[1, 1].set_title('Second Largest Cluster')
+
+    save_path = "LocalizationLogs"
+
+    if save_path:
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        plt.savefig(get_next_filename(save_path))
+    else:
+        plt.show()
+
+    # plt.show(block=False)
+
+    # # Pause for 5 seconds
+    # plt.pause(1)
+
+    plt.close()
+
+    return first, second
