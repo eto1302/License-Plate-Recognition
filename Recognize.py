@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import time
 
 def improveMask(mask):
 	n8 = np.array([     [1, 1, 1],
@@ -25,15 +26,22 @@ def get_next_filename(folder):
 		i += 1
 
 def crop_unnecessary_horizontal_borders(image):
-	height, width = image.shape[:2]
-	keep_indices = []
-	for i in range(height):
-		non_zero_elem = np.count_nonzero(image[i])
-		if non_zero_elem > 0.3 * width:
-			keep_indices.append(i)
-	keep_indices = np.array(keep_indices)
-	cropped_image = image[keep_indices]
-	return cropped_image
+	while(True):
+		height, width = image.shape[:2]
+		toRemove = None
+		for ind, currRow in enumerate(image):
+			if(np.sum(currRow) == 0 or np.sum(currRow) == 255 * width):
+				toRemove = ind
+				break
+
+		if(toRemove is None):
+			break
+
+		if(toRemove < height / 2):
+			image = image[toRemove + 1:]			
+		elif(toRemove >= height / 2):
+			image = image[:toRemove]
+	return image
 
 def indices_to_crop(image):
 	height, width = image.shape[:2]
@@ -147,10 +155,10 @@ def segment_and_recognize(image):
 	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY_INV)
 
 	cropped = crop_unnecessary_horizontal_borders(foreground)
-	improved_cropped = improveMask(cropped)
+	# improved_cropped = improveMask(cropped)
 
-	indices = indices_to_crop(improved_cropped)
-	plate_characters, number_of_characters = split_image(improved_cropped, indices)
+	# indices = indices_to_crop(improved_cropped)
+	# plate_characters, number_of_characters = split_image(improved_cropped, indices)
 	# print(f"Number of characters found = {number_of_characters}")
 
 	sample_characters, reference_characters = load_sample_images()
@@ -159,18 +167,25 @@ def segment_and_recognize(image):
 	axs[0].imshow(greyscaleImage)
 	axs[0].set_title('Original Image')
 
-	if number_of_characters > 1:
-		axs[1].imshow(plate_characters[0])
-		axs[1].set_title('A')
+	axs[1].imshow(foreground)
+	axs[1].set_title('Foreground Image')
 
-		axs[2].imshow(plate_characters[1])
-		axs[2].set_title('B')
-	else:
-		axs[1].imshow(cropped)
-		axs[1].set_title('Foreground Image')
+	axs[2].imshow(cropped)
+	axs[2].set_title('Improved Foreground Image')
 
-		axs[2].imshow(improved_cropped)
-		axs[2].set_title('Improved Foreground Image')
+
+	# if number_of_characters > 1:
+	# 	axs[1].imshow(plate_characters[0])
+	# 	axs[1].set_title('A')
+
+	# 	axs[2].imshow(plate_characters[1])
+	# 	axs[2].set_title('B')
+	# else:
+	# 	axs[1].imshow(cropped)
+	# 	axs[1].set_title('Foreground Image')
+
+	# 	axs[2].imshow(improved_cropped)
+	# 	axs[2].set_title('Improved Foreground Image')
 
 	# plate_number = ""
 	# for char in plate_characters:
@@ -178,14 +193,18 @@ def segment_and_recognize(image):
 	#
 	# print(plate_number)
 
-	save_path = "SegmentationLogs"
+	# save_path = "SegmentationLogs"
 
-	if save_path:
-		if not os.path.exists(save_path):
-			os.makedirs(save_path)
-		plt.savefig(get_next_filename(save_path))
-	else:
-		plt.show()
+	# if save_path:
+	# 	if not os.path.exists(save_path):
+	# 		os.makedirs(save_path)
+	# 	plt.savefig(get_next_filename(save_path))
+	# else:
+	# 	plt.show()
+
+	plt.show(block=False)
+
+	plt.pause(3)
 
 	plt.close()
 
