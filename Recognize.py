@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+import pylab as p
+
+
 def improveMask(mask):
 	n8 = np.array([     [1, 1, 1],
                         [1, 1, 1],
@@ -10,9 +13,10 @@ def improveMask(mask):
 	n4 = np.array([     [0, 1, 0],
                         [1, 1, 1],
                         [0, 1, 0]], np.uint8)
+	test = np.array(np.ones(20), np.uint8)
 
-	mask = cv2.dilate(mask, n4)
-	mask = cv2.erode(mask, n8)
+	mask = cv2.erode(mask, n4)
+	mask = cv2.dilate(mask, n8)
 	return mask
 
 def get_next_filename(folder):
@@ -29,7 +33,7 @@ def crop_unnecessary_horizontal_borders(image):
 	keep_indices = []
 	for i in range(height):
 		non_zero_elem = np.count_nonzero(image[i])
-		if non_zero_elem > 0.3 * width:
+		if non_zero_elem < 0.7 * width:
 			keep_indices.append(i)
 	keep_indices = np.array(keep_indices)
 	cropped_image = image[keep_indices]
@@ -95,12 +99,12 @@ def load_sample_images():
 	return sample_characters, reference_characters
 
 def recognize_character(character, sample_characters, reference_characters):
-	character = np.array(reshape_found_characters(character))
+	character = reshape_found_characters(character)
 	lowest_score = 99999999
-	character_match = None
+	character_match = ""
 	for char in sample_characters:
-		xor = cv2.bitwise_xor(character, reference_characters[char])
-		score = np.count_nonzero(xor)
+		a = cv2.bitwise_xor(character, reference_characters[char])
+		score = np.count_nonzero(a)
 		if score < lowest_score:
 			lowest_score = score
 			character_match = char
@@ -109,9 +113,21 @@ def recognize_character(character, sample_characters, reference_characters):
 def reshape_found_characters(found_character):
 	template = cv2.imread(f"dataset/SameSizeLetters/1.bmp")
 	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-	template_height, template_width = template.shape[:2]
 
-	found_character = cv2.resize(found_character, (template_width, template_height))
+	template_height, template_width = template.shape[:2]
+	found_height, found_width = found_character.shape[:2]
+
+	width_difference = found_width - template_width
+
+	found_character = cv2.resize(found_character, (found_width, template_height))
+
+	if width_difference < 0:
+		width_difference = abs(width_difference)
+		while width_difference > 0:
+			found_character = np.c_[found_character, np.zeros(template_height)]
+			width_difference -= 1
+	else:
+		found_character = cv2.resize(found_character, (template_width, template_height))
 
 	return found_character
 def segment_and_recognize(image):
@@ -133,10 +149,10 @@ def segment_and_recognize(image):
 	if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
 		return ""
 	frameNumber = ""
-	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	origial = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	# greyscaleImage = cropImage(greyscaleImage)
 	# greyscaleImage = cv2.equalizeHist(greyscaleImage)
-	greyscaleImage = (255 / (np.max(greyscaleImage) - np.min(greyscaleImage))) * (greyscaleImage - np.min(greyscaleImage)) 
+	greyscaleImage = (255 / (np.max(origial) - np.min(origial))) * (origial - np.min(origial))
 
 	# TODO change the coefficient, when the plates are rotated properly
 	# print(np.mean(greyscaleImage))
@@ -144,7 +160,7 @@ def segment_and_recognize(image):
 
 	threshold = np.mean(greyscaleImage) * 0.8
 
-	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY_INV)
+	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY)
 
 	cropped = crop_unnecessary_horizontal_borders(foreground)
 	improved_cropped = improveMask(cropped)
@@ -155,22 +171,17 @@ def segment_and_recognize(image):
 
 	sample_characters, reference_characters = load_sample_images()
 
-	fig, axs = plt.subplots(1, 3, figsize=(20, 8))
-	axs[0].imshow(greyscaleImage)
+	for i in range(number_of_characters):
+		plate_characters[i] = crop_unnecessary_horizontal_borders(plate_characters[i])
+		plate_characters[i] = reshape_found_characters(plate_characters[i])
+	# 	test = recognize_character(plate_characters[i], sample_characters, reference_characters)
+
+	fig, axs = plt.subplots(1, 2, figsize=(20, 8))
+	axs[0].imshow(origial)
 	axs[0].set_title('Original Image')
 
-	if number_of_characters > 1:
-		axs[1].imshow(plate_characters[0])
-		axs[1].set_title('A')
-
-		axs[2].imshow(plate_characters[1])
-		axs[2].set_title('B')
-	else:
-		axs[1].imshow(cropped)
-		axs[1].set_title('Foreground Image')
-
-		axs[2].imshow(improved_cropped)
-		axs[2].set_title('Improved Foreground Image')
+	axs[1].imshow(improved_cropped)
+	axs[1].set_title('Improved Foreground Image')
 
 	# plate_number = ""
 	# for char in plate_characters:
