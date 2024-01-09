@@ -68,22 +68,12 @@ def split_image(image, indices):
 	for index in  indices:
 		if index - prev_index > 0.07 * width:
 			char = image[:, prev_index : index]
-			if char.any():
-				characters.append(crop_unnecessary_borders(char))
+			characters.append(crop_unnecessary_borders(char))
 			prev_index = index
 			number_characters_detected += 1
 
 	# characters = np.array(characters)
 	return characters, int(number_characters_detected)
-
-# def cropImage(image):
-#     topRows = np.any(image > 200, axis=1)
-#     bottomRows = np.any(image[::-1] > 200, axis=1)
-#
-#     firstRow = np.argmax(topRows)
-#     lastRow = len(image) - 1 - np.argmax(bottomRows)
-#
-#     return image[firstRow:lastRow + 1, :]
 
 def load_sample_images():
 	sample_characters = np.array(
@@ -112,7 +102,7 @@ def load_sample_images():
 
 def recognize_character(character, sample_characters, reference_characters):
 	if character.shape[0] == 0 or character.shape[1] == 0:
-		return ""
+		return "-"
 
 	character = np.array(reshape_found_characters(character))
 	lowest_score = 99999999
@@ -120,8 +110,12 @@ def recognize_character(character, sample_characters, reference_characters):
 	for char in sample_characters:
 		if(sample_characters.shape == (0, 0)):
 			return '-'
+
+		reference_characters[char] = reference_characters[char].astype(character.dtype)
+
 		xor = cv2.bitwise_xor(character, reference_characters[char])
 		score = np.count_nonzero(xor)
+		print(char, score)
 		if score < lowest_score:
 			lowest_score = score
 			character_match = char
@@ -135,7 +129,6 @@ def reshape_found_characters(found_character):
 	if found_character.shape[0] != 0 and found_character.shape[1] != 0:
 		template_height, template_width = template.shape[:2]
 		found_height, found_width = found_character.shape[:2]
-
 
 		width_difference = found_width - template_width
 
@@ -206,17 +199,22 @@ def segment_and_recognize(image):
 	axs[0, 2].set_title('Improved Foreground Image')
 
 	# Second row
+	plate_number = ""
 	for i in range(number_of_characters):
-		if (plate_characters[i].shape[0] == 0):
+		if plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0:
 			continue
 
 		plate_characters[i] = reshape_found_characters(plate_characters[i])
-		# print(recognize_character(plate_characters[i], sample_characters, reference_characters))
+		#print(recognize_character(plate_characters[i], sample_characters, reference_characters))
+		plate_number += recognize_character(plate_characters[i], sample_characters, reference_characters)
+
 		axs[1, i].imshow(plate_characters[i])
 		axs[1, i].set_title('Character in pos: ' + str(i))
 
 	# plt.show(block=False)
 	# plt.pause(3)
+
+	print(plate_number)
 
 	save_path = "SegmentationLogs"
 
@@ -229,11 +227,4 @@ def segment_and_recognize(image):
 
 	plt.close()
 
-
-
-	# plate_number = ""
-	# for char in plate_characters:
-	# 	plate_number += recognize_character(char, sample_characters, reference_characters)
-	#
-	# print(plate_number)	
 	return frameNumber
