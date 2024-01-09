@@ -60,7 +60,7 @@ def split_image(image, indices):
 	prev_index = 0
 	for index in  indices:
 		if index - prev_index > 5:
-			char = image[:, prev_index: index]
+			char = image[:, prev_index : index]
 			characters.append(char)
 			prev_index = index
 			number_characters_detected += 1
@@ -142,36 +142,51 @@ def segment_and_recognize(image):
 		return ""
 	frameNumber = ""
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	# greyscaleImage = cropImage(greyscaleImage)
-	# greyscaleImage = cv2.equalizeHist(greyscaleImage)
-	greyscaleImage = (255 / (np.max(greyscaleImage) - np.min(greyscaleImage))) * (greyscaleImage - np.min(greyscaleImage)) 
+
+	greyscaleImage = crop_unnecessary_horizontal_borders(greyscaleImage)
+	greyscaleImage = cv2.equalizeHist(greyscaleImage)
+	# greyscaleImage = (255 / (np.max(greyscaleImage) - np.min(greyscaleImage))) * (greyscaleImage - np.min(greyscaleImage)) 
 
 	# TODO change the coefficient, when the plates are rotated properly
 	# print(np.mean(greyscaleImage))
-	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.77 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY_INV)
+	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.65 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY_INV)
 
-	threshold = np.mean(greyscaleImage) * 0.8
+	threshold = np.mean(greyscaleImage) * 0.5
 
 	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY_INV)
 
 	cropped = crop_unnecessary_horizontal_borders(foreground)
-	# improved_cropped = improveMask(cropped)
+	improved_cropped = improveMask(cropped)
 
-	# indices = indices_to_crop(improved_cropped)
-	# plate_characters, number_of_characters = split_image(improved_cropped, indices)
-	# print(f"Number of characters found = {number_of_characters}")
+	indices = indices_to_crop(improved_cropped)
+	plate_characters, number_of_characters = split_image(improved_cropped, indices)
+	print(f"Number of characters found = {number_of_characters}")
 
 	sample_characters, reference_characters = load_sample_images()
+	
+	num_cols_first_row = max(number_of_characters, 3)
 
-	fig, axs = plt.subplots(1, 3, figsize=(20, 8))
-	axs[0].imshow(greyscaleImage)
-	axs[0].set_title('Original Image')
+	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
+    
+	# First row
+	axs[0, 0].imshow(greyscaleImage)
+	axs[0, 0].set_title('Original Image')
 
-	axs[1].imshow(foreground)
-	axs[1].set_title('Foreground Image')
+	axs[0, 1].imshow(foreground)
+	axs[0, 1].set_title('Foreground Image')
 
-	axs[2].imshow(cropped)
-	axs[2].set_title('Improved Foreground Image')
+	axs[0, 2].imshow(improved_cropped)
+	axs[0, 2].set_title('Improved Foreground Image')
+
+	# Second row
+	for i in range(number_of_characters):
+		axs[1, i].imshow(plate_characters[i])
+		axs[1, i].set_title('Character in pos: ' + str(i))
+
+	plt.show(block=False)
+	plt.pause(3)
+	plt.close()
+
 
 
 	# if number_of_characters > 1:
@@ -201,11 +216,4 @@ def segment_and_recognize(image):
 	# 	plt.savefig(get_next_filename(save_path))
 	# else:
 	# 	plt.show()
-
-	plt.show(block=False)
-
-	plt.pause(3)
-
-	plt.close()
-
 	return frameNumber
