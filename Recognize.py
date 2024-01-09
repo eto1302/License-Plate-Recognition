@@ -42,7 +42,7 @@ def crop_unnecessary_borders(image):
 	
 	nonzero_indices = np.nonzero(np.sum(image, axis=0))[0]
 	if len(nonzero_indices) == 0:
-		return image	
+		return image
 	left = nonzero_indices[0]
 	right = nonzero_indices[-1]
 	image = image[:, left:right]
@@ -55,7 +55,7 @@ def indices_to_crop(image):
 		all_zero = np.all(image[:, i] == 0)
 		if all_zero:
 			indices.append(i)
-	indices.append(width - 1)
+	indices.append(width)
 	indices = np.array(indices)
 	return indices
 
@@ -68,12 +68,22 @@ def split_image(image, indices):
 	for index in  indices:
 		if index - prev_index > 0.07 * width:
 			char = image[:, prev_index : index]
-			characters.append(crop_unnecessary_borders(char))
+			if char.any():
+				characters.append(crop_unnecessary_borders(char))
 			prev_index = index
 			number_characters_detected += 1
 
 	# characters = np.array(characters)
 	return characters, int(number_characters_detected)
+
+# def cropImage(image):
+#     topRows = np.any(image > 200, axis=1)
+#     bottomRows = np.any(image[::-1] > 200, axis=1)
+#
+#     firstRow = np.argmax(topRows)
+#     lastRow = len(image) - 1 - np.argmax(bottomRows)
+#
+#     return image[firstRow:lastRow + 1, :]
 
 def load_sample_images():
 	sample_characters = np.array(
@@ -101,6 +111,9 @@ def load_sample_images():
 	return sample_characters, reference_characters
 
 def recognize_character(character, sample_characters, reference_characters):
+	if character.shape[0] == 0 or character.shape[1] == 0:
+		return ""
+
 	character = np.array(reshape_found_characters(character))
 	lowest_score = 99999999
 	character_match = None
@@ -116,12 +129,28 @@ def recognize_character(character, sample_characters, reference_characters):
 
 def reshape_found_characters(found_character):
 	template = cv2.imread(f"dataset/SameSizeLetters/1.bmp")
-	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-	template_height, template_width = template.shape[:2]
 
-	found_character = cv2.resize(found_character, (template_width, template_height))
+	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
+	if found_character.shape[0] != 0 and found_character.shape[1] != 0:
+		template_height, template_width = template.shape[:2]
+		found_height, found_width = found_character.shape[:2]
+
+
+		width_difference = found_width - template_width
+
+		found_character = cv2.resize(found_character, (found_width, template_height))
+
+		if width_difference < 0:
+			width_difference = abs(width_difference)
+			while width_difference > 0:
+				found_character = np.c_[found_character, np.zeros(template_height)]
+				width_difference -= 1
+		else:
+			found_character = cv2.resize(found_character, (template_width, template_height))
 
 	return found_character
+
 def segment_and_recognize(image):
 	"""
 	In this file, you will define your own segment_and_recognize function.
@@ -152,7 +181,8 @@ def segment_and_recognize(image):
 	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.65 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY)
 	greyscaleImage = cv2.bitwise_not(greyscaleImage)
 
-	ret,foreground = cv2.threshold(greyscaleImage,np.mean(greyscaleImage) * 0.5,255,cv2.THRESH_BINARY)
+	ret, foreground = cv2.threshold(greyscaleImage, np.mean(greyscaleImage) * 0.5, 255, cv2.THRESH_BINARY)
+
 	cropped = crop_unnecessary_borders(foreground)
 	improved_cropped = improveMask(cropped)
 
@@ -162,19 +192,6 @@ def segment_and_recognize(image):
 	sample_characters, reference_characters = load_sample_images()
 	
 	num_cols_first_row = max(number_of_characters, 3)
-
-	# b = cv2.imread(f"dataset/SameSizeNumbers/3.bmp")
-	# b = cv2.cvtColor(b, cv2.COLOR_BGR2GRAY)
-	# b = crop_unnecessary_borders(b)
-	# print(b.shape)	
-	# fig, axs = plt.subplots(1, figsize=(12, 6))
-	# axs.imshow(b, cmap='gray')
-	# axs.set_title('B')
-	# plt.show()
-	# plt.pause(3)
-	# plt.close()
-
-	### Size of letters and numbers is about (83,55). But varies between different characters.
 
 	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
     
@@ -190,8 +207,11 @@ def segment_and_recognize(image):
 
 	# Second row
 	for i in range(number_of_characters):
-		if(plate_characters[i].shape[0] == 0):
+		if (plate_characters[i].shape[0] == 0):
 			continue
+
+		plate_characters[i] = reshape_found_characters(plate_characters[i])
+		# print(recognize_character(plate_characters[i], sample_characters, reference_characters))
 		axs[1, i].imshow(plate_characters[i])
 		axs[1, i].set_title('Character in pos: ' + str(i))
 
