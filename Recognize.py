@@ -42,7 +42,7 @@ def crop_unnecessary_borders(image):
 	
 	nonzero_indices = np.nonzero(np.sum(image, axis=0))[0]
 	if len(nonzero_indices) == 0:
-		return image
+		return image	
 	left = nonzero_indices[0]
 	right = nonzero_indices[-1]
 	image = image[:, left:right]
@@ -55,6 +55,7 @@ def indices_to_crop(image):
 		all_zero = np.all(image[:, i] == 0)
 		if all_zero:
 			indices.append(i)
+	indices.append(width - 1)
 	indices = np.array(indices)
 	return indices
 
@@ -73,15 +74,6 @@ def split_image(image, indices):
 
 	# characters = np.array(characters)
 	return characters, int(number_characters_detected)
-
-# def cropImage(image):
-#     topRows = np.any(image > 200, axis=1)
-#     bottomRows = np.any(image[::-1] > 200, axis=1)
-#
-#     firstRow = np.argmax(topRows)
-#     lastRow = len(image) - 1 - np.argmax(bottomRows)
-#
-#     return image[firstRow:lastRow + 1, :]
 
 def load_sample_images():
 	sample_characters = np.array(
@@ -159,9 +151,8 @@ def segment_and_recognize(image):
 	# print(np.mean(greyscaleImage))
 	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.65 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY)
 	greyscaleImage = cv2.bitwise_not(greyscaleImage)
-	threshold = np.mean(greyscaleImage) * 0.5
 
-	ret,foreground = cv2.threshold(greyscaleImage,threshold,255,cv2.THRESH_BINARY)
+	ret,foreground = cv2.threshold(greyscaleImage,np.mean(greyscaleImage) * 0.5,255,cv2.THRESH_BINARY)
 	cropped = crop_unnecessary_borders(foreground)
 	improved_cropped = improveMask(cropped)
 
@@ -171,6 +162,19 @@ def segment_and_recognize(image):
 	sample_characters, reference_characters = load_sample_images()
 	
 	num_cols_first_row = max(number_of_characters, 3)
+
+	# b = cv2.imread(f"dataset/SameSizeNumbers/3.bmp")
+	# b = cv2.cvtColor(b, cv2.COLOR_BGR2GRAY)
+	# b = crop_unnecessary_borders(b)
+	# print(b.shape)	
+	# fig, axs = plt.subplots(1, figsize=(12, 6))
+	# axs.imshow(b, cmap='gray')
+	# axs.set_title('B')
+	# plt.show()
+	# plt.pause(3)
+	# plt.close()
+
+	### Size of letters and numbers is about (83,55). But varies between different characters.
 
 	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
     
@@ -186,6 +190,8 @@ def segment_and_recognize(image):
 
 	# Second row
 	for i in range(number_of_characters):
+		if(plate_characters[i].shape[0] == 0):
+			continue
 		axs[1, i].imshow(plate_characters[i])
 		axs[1, i].set_title('Character in pos: ' + str(i))
 
