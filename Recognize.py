@@ -16,6 +16,21 @@ def improveMask(mask):
 	mask = cv2.erode(mask, n8)
 	return mask
 
+
+def improveCropped(mask):
+	n8 = np.array([     [1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]], np.uint8)
+	n4 = np.array([     [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0]], np.uint8)
+	horizontal = np.array([ [0, 0, 0],
+							[1,1,1],
+							[0,0,0]], np.uint8)
+	# mask = cv2.erode(mask, horizontal)
+
+	return mask
+
 def get_next_filename(folder):
 	i = 1
 	while True:
@@ -24,12 +39,12 @@ def get_next_filename(folder):
 			return filename
 		i += 1
 
-def crop_unnecessary_borders(image):
+def crop_unnecessary_borders(image, coeff = 0.80):
 	while(True):
 		height, width = image.shape[:2]
 		toRemoveH = None
 		for ind, currRow in enumerate(image):
-			if(np.sum(currRow) == 0 or np.sum(currRow) == 255 * width):
+			if(np.sum(currRow) == 0 or np.sum(currRow) > 255 * width * coeff):
 				toRemoveH = ind
 				break
 		if(toRemoveH is not None):
@@ -66,9 +81,9 @@ def split_image(image, indices):
 	# Split the image based on zero columns
 	prev_index = 0
 	for index in  indices:
-		if index - prev_index > 0.07 * width:
+		if index - prev_index > 0.05 * width:
 			char = image[:, prev_index : index]
-			characters.append(crop_unnecessary_borders(char))
+			characters.append(crop_unnecessary_borders(char, 1))
 			prev_index = index
 			number_characters_detected += 1
 
@@ -87,7 +102,7 @@ def load_sample_images():
 	for i in range(17):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeLetters/{file}.bmp"
-		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY))
+		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 1)
 		file += 1
 
 	# Load the numbers
@@ -95,7 +110,7 @@ def load_sample_images():
 	for i in range(17, 27):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeNumbers/{file}.bmp"
-		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY))
+		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 1)
 		file += 1
 
 	return sample_characters, reference_characters
@@ -117,7 +132,6 @@ def recognize_character(character, sample_characters, reference_characters):
     top_three_matches = sorted_scores[:3]
 
     return top_three_matches
-
 
 def reshape_to_image(image1, image2):
 	target_height, target_width = image2.shape[:2]
@@ -179,7 +193,7 @@ def segment_and_recognize(image):
 	ret, foreground = cv2.threshold(greyscaleImage, np.mean(greyscaleImage) * 0.5, 255, cv2.THRESH_BINARY)
 
 	cropped = crop_unnecessary_borders(foreground)
-	improved_cropped = improveMask(cropped)
+	improved_cropped = improveCropped(cropped)
 
 	indices = indices_to_crop(improved_cropped)
 	plate_characters, number_of_characters = split_image(improved_cropped, indices)
@@ -231,4 +245,4 @@ def segment_and_recognize(image):
 
 	plt.close()
 
-	return frameNumber
+	return plate_number
