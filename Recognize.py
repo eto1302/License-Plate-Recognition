@@ -87,7 +87,7 @@ def load_sample_images():
 	for i in range(17):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeLetters/{file}.bmp"
-		reference_characters[char] = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY)
+		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY))
 		file += 1
 
 	# Load the numbers
@@ -95,7 +95,7 @@ def load_sample_images():
 	for i in range(17, 27):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeNumbers/{file}.bmp"
-		reference_characters[char] = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY)
+		reference_characters[char] = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY))
 		file += 1
 
 	return sample_characters, reference_characters
@@ -104,22 +104,49 @@ def recognize_character(character, sample_characters, reference_characters):
 	if character.shape[0] == 0 or character.shape[1] == 0:
 		return "-"
 
-	character = np.array(reshape_found_characters(character))
 	lowest_score = 99999999
 	character_match = None
+	second_lowest_score = 99999999
+	second_character_match = None
 	for char in sample_characters:
-		if(sample_characters.shape == (0, 0)):
-			return '-'
 
-		reference_characters[char] = reference_characters[char].astype(character.dtype)
-
+		reference_characters[char] = reshape_to_image(reference_characters[char].astype(character.dtype), character)
 		xor = cv2.bitwise_xor(character, reference_characters[char])
 		score = np.count_nonzero(xor)
-		print(char, score)
+		# print(char, score)
 		if score < lowest_score:
+			second_lowest_score = lowest_score
 			lowest_score = score
+			second_character_match = character_match
 			character_match = char
-	return character_match
+		elif score < second_lowest_score:
+			second_lowest_score = score
+			second_character_match = char
+		
+		# plt.figure(figsize=(15, 5))
+
+		# plt.subplot(1, 3, 1)
+		# plt.imshow(character, cmap='gray')
+		# plt.title('Character')
+
+		# plt.subplot(1, 3, 2)
+		# plt.imshow(reference_characters[char], cmap='gray')
+		# plt.title('Current Character: ' + str(score))
+
+		# plt.subplot(1, 3, 3)
+		# plt.imshow(reference_characters[character_match], cmap='gray')
+		# plt.title('Character Match: ' + str(lowest_score))
+
+		# plt.show(block=False)
+		# plt.pause(2)
+		# plt.close()
+
+	print(character_match, lowest_score)
+	return character_match, lowest_score, second_character_match, second_lowest_score
+
+def reshape_to_image(image1, image2):
+	target_height, target_width = image2.shape[:2]
+	return cv2.resize(image1, (target_width, target_height))
 
 def reshape_found_characters(found_character):
 	template = cv2.imread(f"dataset/SameSizeLetters/1.bmp")
@@ -188,7 +215,6 @@ def segment_and_recognize(image):
 
 	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
     
-	# First row
 	axs[0, 0].imshow(greyscaleImage, cmap='gray')
 	axs[0, 0].set_title('Original Image')
 
@@ -204,12 +230,13 @@ def segment_and_recognize(image):
 		if plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0:
 			continue
 
-		plate_characters[i] = reshape_found_characters(plate_characters[i])
+		# plate_characters[i] = reshape_found_characters(plate_characters[i])
 		#print(recognize_character(plate_characters[i], sample_characters, reference_characters))
-		plate_number += recognize_character(plate_characters[i], sample_characters, reference_characters)
+		match, score, second_match, second_score = recognize_character(plate_characters[i], sample_characters, reference_characters)
+		plate_number += match
 
 		axs[1, i].imshow(plate_characters[i])
-		axs[1, i].set_title('Character in pos: ' + str(i))
+		axs[1, i].set_title(f'{match} : {score}\n {second_match} : {second_score}')
 
 	# plt.show(block=False)
 	# plt.pause(3)
