@@ -101,48 +101,23 @@ def load_sample_images():
 	return sample_characters, reference_characters
 
 def recognize_character(character, sample_characters, reference_characters):
-	if character.shape[0] == 0 or character.shape[1] == 0:
-		return "-"
+    if character.shape[0] == 0 or character.shape[1] == 0:
+        return [('-', 0), ('-', 0), ('-', 0)]
+	
+    scores_dict = {}
+    for char in sample_characters:
+        reference_characters[char] = reshape_to_image(reference_characters[char].astype(character.dtype), character)
+        xor = cv2.bitwise_xor(character, reference_characters[char])
+        score = np.count_nonzero(xor)
 
-	lowest_score = 99999999
-	character_match = None
-	second_lowest_score = 99999999
-	second_character_match = None
-	for char in sample_characters:
+        scores_dict[char] = score
 
-		reference_characters[char] = reshape_to_image(reference_characters[char].astype(character.dtype), character)
-		xor = cv2.bitwise_xor(character, reference_characters[char])
-		score = np.count_nonzero(xor)
-		# print(char, score)
-		if score < lowest_score:
-			second_lowest_score = lowest_score
-			lowest_score = score
-			second_character_match = character_match
-			character_match = char
-		elif score < second_lowest_score:
-			second_lowest_score = score
-			second_character_match = char
-		
-		# plt.figure(figsize=(15, 5))
+    sorted_scores = sorted(scores_dict.items(), key=lambda x: x[1])
+    
+    top_three_matches = sorted_scores[:3]
 
-		# plt.subplot(1, 3, 1)
-		# plt.imshow(character, cmap='gray')
-		# plt.title('Character')
+    return top_three_matches
 
-		# plt.subplot(1, 3, 2)
-		# plt.imshow(reference_characters[char], cmap='gray')
-		# plt.title('Current Character: ' + str(score))
-
-		# plt.subplot(1, 3, 3)
-		# plt.imshow(reference_characters[character_match], cmap='gray')
-		# plt.title('Character Match: ' + str(lowest_score))
-
-		# plt.show(block=False)
-		# plt.pause(2)
-		# plt.close()
-
-	print(character_match, lowest_score)
-	return character_match, lowest_score, second_character_match, second_lowest_score
 
 def reshape_to_image(image1, image2):
 	target_height, target_width = image2.shape[:2]
@@ -227,16 +202,18 @@ def segment_and_recognize(image):
 	# Second row
 	plate_number = ""
 	for i in range(number_of_characters):
-		if plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0:
-			continue
 
 		# plate_characters[i] = reshape_found_characters(plate_characters[i])
 		#print(recognize_character(plate_characters[i], sample_characters, reference_characters))
-		match, score, second_match, second_score = recognize_character(plate_characters[i], sample_characters, reference_characters)
-		plate_number += match
+		recognized = recognize_character(plate_characters[i], sample_characters, reference_characters)
+		matches = [rec[0] for rec in recognized]
+		scores = [rec[1] for rec in recognized]
 
+		plate_number += matches[0]
+		if(plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0):
+			continue
 		axs[1, i].imshow(plate_characters[i])
-		axs[1, i].set_title(f'{match} : {score}\n {second_match} : {second_score}')
+		axs[1, i].set_title(f'{matches[0]}: {scores[0]}\n{matches[1]}: {scores[1]}\n{matches[2]}: {scores[2]}')
 
 	# plt.show(block=False)
 	# plt.pause(3)
