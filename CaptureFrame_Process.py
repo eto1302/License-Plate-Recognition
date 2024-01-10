@@ -42,9 +42,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     
     with open(save_path, "w") as output:        
         output.write("License plate,Frame no.,Timestamp(seconds)\n")
-        previousFrame = None
-        hasSecond = False
-        cnt = 0
         while True:
             # Capture frame
             ret, frame = video.read()
@@ -59,52 +56,20 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
             if((frame_number - 1) % sample_frequency != 0): 
                 continue
             
-            cnt += 1
             # TODO: Implement actual algorithms for Localizing Plates
             # The plate_detection function should return the coordinates of detected plates
             firstPlate, secondPlate = Localization.plate_detection(frame)
             
-            first_scores = [{},{},{},{},{},{},{},{}]
-            second_scores = [{},{},{},{},{},{},{},{}]
             
-            scores = Recognize.segment_and_recognize(firstPlate)   
-            if(scores is not None):
-                for ind, curr in enumerate(first_scores):
-                    curr = combine(curr, scores[ind])             
-            
-            scores = Recognize.segment_and_recognize(secondPlate)
-            if(scores is not None):
-                hasSecond = True
-                for ind, curr in enumerate(second_scores):
-                    curr = combine(curr, scores[ind])
-            print(cnt)
-            if(cnt == 3):
-                cnt = 0
-                print("CHANGED")
-                firstPlate_text = ""
-                for scores_dict in first_scores:
-                    sorted_scores = sorted(scores_dict.items(), key=lambda x: x[1])
-
-                    min_char = sorted_scores[0][0]
-
-                    firstPlate_text += min_char
-
-                output.write(f"{firstPlate_text}, {frame_number}, {timestamp}\n")
-
-                if(hasSecond):
-                    secondPlate_text = ""
-                    for scores_dict in second_scores:
-                        sorted_scores = sorted(scores_dict.items(), key=lambda x: x[1])
-
-                        min_char = sorted_scores[0][0]
-
-                        secondPlate_text += min_char
-
-                    output.write(f"{secondPlate_text}, {frame_number}, {timestamp}\n")
+            plate = Recognize.segment_and_recognize(firstPlate)   
+            print(plate)
+            if(plate is not None):
+                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
                 
-                first_scores = [{},{},{},{},{},{},{},{}]
-                second_scores = [{},{},{},{},{},{},{},{}]
-                hasSecond = False
+            plate = Recognize.segment_and_recognize(secondPlate)   
+            print(plate)
+            if(plate is not None):
+                output.write(f"{plate}, {frame_number}, {timestamp}\n") 
 
 
     # Release the video capture object

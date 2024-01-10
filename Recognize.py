@@ -250,6 +250,7 @@ def segment_and_recognize(image):
 
 	# Second row
 	output = []
+	plate = ""
 	for i in range(number_of_characters):
 
 		# plate_characters[i] = reshape_found_characters(plate_characters[i])
@@ -257,7 +258,7 @@ def segment_and_recognize(image):
 		recognized = recognize_character(plate_characters[i], sample_characters, reference_characters)
 		matches = [rec[0] for rec in recognized]
 		scores = [rec[1] for rec in recognized]
-		output.append(recognized)
+		plate += matches[0]
 		if(plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0):
 			continue
 
@@ -279,4 +280,4 @@ def segment_and_recognize(image):
 
 	plt.close()
 
-	return output
+	return plate
