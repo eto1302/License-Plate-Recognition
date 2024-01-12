@@ -16,6 +16,19 @@ def improveMask(mask):
 	mask = cv2.erode(mask, n8)
 	return mask
 
+def improveCropped(mask):
+	n8 = np.array([     [1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]], np.uint8)
+	n4 = np.array([     [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0]], np.uint8)
+	horizontal = np.array([ [0, 0, 0],
+							[1,1,1],
+							[0,0,0]], np.uint8)
+	# mask = cv2.erode(mask, n4)
+	return mask
+
 def get_next_filename(folder):
 	i = 1
 	while True:
@@ -24,12 +37,12 @@ def get_next_filename(folder):
 			return filename
 		i += 1
 
-def crop_unnecessary_borders(image):
+def crop_unnecessary_borders(image,coeff_low = 0.05,  coeff_high = 0.80):
 	while(True):
 		height, width = image.shape[:2]
 		toRemoveH = None
 		for ind, currRow in enumerate(image):
-			if(np.sum(currRow) == 0 or np.sum(currRow) == 255 * width):
+			if(np.sum(currRow) < 255 * width * coeff_low or np.sum(currRow) > 255 * width * coeff_high):
 				toRemoveH = ind
 				break
 		if(toRemoveH is not None):
@@ -44,7 +57,7 @@ def crop_unnecessary_borders(image):
 	if len(nonzero_indices) == 0:
 		return image
 	left = nonzero_indices[0]
-	right = nonzero_indices[-1]
+	right = nonzero_indices[-2]
 	image = image[:, left:right]
 	return image
 
@@ -66,9 +79,9 @@ def split_image(image, indices):
 	# Split the image based on zero columns
 	prev_index = 0
 	for index in  indices:
-		if index - prev_index > 0.07 * width:
+		if index - prev_index > 0.05 * width:
 			char = image[:, prev_index : index]
-			characters.append(crop_unnecessary_borders(char))
+			characters.append(crop_unnecessary_borders(char, 0.05, 1))
 			prev_index = index
 			number_characters_detected += 1
 
@@ -87,7 +100,9 @@ def load_sample_images():
 	for i in range(17):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeLetters/{file}.bmp"
-		reference_characters[char] = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY)
+		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 1)
+		_, thresholded_character = cv2.threshold(reference_character, 10, 255, cv2.THRESH_BINARY)
+		reference_characters[char] = thresholded_character
 		file += 1
 
 	# Load the numbers
@@ -95,31 +110,65 @@ def load_sample_images():
 	for i in range(17, 27):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeNumbers/{file}.bmp"
-		reference_characters[char] = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY)
+		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 1)
+		_, thresholded_character = cv2.threshold(reference_character, 10, 255, cv2.THRESH_BINARY)
+		reference_characters[char] = thresholded_character
 		file += 1
 
 	return sample_characters, reference_characters
 
 def recognize_character(character, sample_characters, reference_characters):
-	if character.shape[0] == 0 or character.shape[1] == 0:
-		return "-"
+    if character.shape[0] == 0 or character.shape[1] == 0:
+        return [('-', 0), ('-', 0), ('-', 0)]
 
-	character = np.array(reshape_found_characters(character))
-	lowest_score = 99999999
-	character_match = None
-	for char in sample_characters:
-		if(sample_characters.shape == (0, 0)):
-			return '-'
+    features_dict = {}
+    recognized = 'B'
+    lowest_residual = float('inf')
 
-		reference_characters[char] = reference_characters[char].astype(character.dtype)
+    for char in sample_characters:
+        reference_characters[char] = reshape_to_image(reference_characters[char].astype(character.dtype), character)
 
-		xor = cv2.bitwise_xor(character, reference_characters[char])
-		score = np.count_nonzero(xor)
-		print(char, score)
-		if score < lowest_score:
-			lowest_score = score
-			character_match = char
-	return character_match
+        char_features = character.flatten()
+        ref_char_features = reference_characters[char].flatten()
+
+        coefficients, residuals, _, _ = np.linalg.lstsq(ref_char_features.reshape(-1, 1), char_features, rcond=None)
+
+        residual = np.sum((char_features - coefficients * ref_char_features)**2)
+
+        if lowest_residual > residual:
+            lowest_residual = residual
+            recognized = char
+
+        features_dict[char] = residual
+
+        # Visualize the characters
+        # plt.figure(figsize=(10, 4))
+
+        # plt.subplot(1, 3, 1)
+        # plt.imshow(character, cmap='gray')
+        # plt.title('Input Character')
+
+        # plt.subplot(1, 3, 2)
+        # plt.imshow(reference_characters[char], cmap='gray')
+        # plt.title('Current Residual: {:.2f}'.format(residual))
+
+        # plt.subplot(1, 3, 3)
+        # plt.imshow(reference_characters[recognized], cmap='gray')
+        # plt.title('Lowest Residual: {:.2f}'.format(lowest_residual))
+
+        # plt.show(block=False)
+        # plt.pause(2)
+        # plt.close()
+
+    sorted_features = sorted(features_dict.items(), key=lambda x: x[1])
+
+    top_three_matches = sorted_features[:3]
+
+    return top_three_matches
+
+def reshape_to_image(image1, image2):
+	target_height, target_width = image2.shape[:2]
+	return cv2.resize(image1, (target_width, target_height))
 
 def reshape_found_characters(found_character):
 	template = cv2.imread(f"dataset/SameSizeLetters/1.bmp")
@@ -161,7 +210,7 @@ def segment_and_recognize(image):
 		You may need to define other functions.
 	"""
 	if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
-		return ""
+		return None
 	frameNumber = ""
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -177,10 +226,12 @@ def segment_and_recognize(image):
 	ret, foreground = cv2.threshold(greyscaleImage, np.mean(greyscaleImage) * 0.5, 255, cv2.THRESH_BINARY)
 
 	cropped = crop_unnecessary_borders(foreground)
-	improved_cropped = improveMask(cropped)
+	improved_cropped = improveCropped(cropped)
 
 	indices = indices_to_crop(improved_cropped)
 	plate_characters, number_of_characters = split_image(improved_cropped, indices)
+	if(number_of_characters != 8):
+		return None
 
 	sample_characters, reference_characters = load_sample_images()
 	
@@ -188,7 +239,6 @@ def segment_and_recognize(image):
 
 	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
     
-	# First row
 	axs[0, 0].imshow(greyscaleImage, cmap='gray')
 	axs[0, 0].set_title('Original Image')
 
@@ -199,22 +249,25 @@ def segment_and_recognize(image):
 	axs[0, 2].set_title('Improved Foreground Image')
 
 	# Second row
-	plate_number = ""
+	output = []
+	plate = ""
 	for i in range(number_of_characters):
-		if plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0:
+
+		# plate_characters[i] = reshape_found_characters(plate_characters[i])
+		#print(recognize_character(plate_characters[i], sample_characters, reference_characters))
+		recognized = recognize_character(plate_characters[i], sample_characters, reference_characters)
+		matches = [rec[0] for rec in recognized]
+		scores = [rec[1] for rec in recognized]
+		plate += matches[0]
+		if(plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0):
 			continue
 
-		plate_characters[i] = reshape_found_characters(plate_characters[i])
-		#print(recognize_character(plate_characters[i], sample_characters, reference_characters))
-		plate_number += recognize_character(plate_characters[i], sample_characters, reference_characters)
-
 		axs[1, i].imshow(plate_characters[i])
-		axs[1, i].set_title('Character in pos: ' + str(i))
+		axs[1, i].set_title(f'{matches[0]}: {scores[0]}\n{matches[1]}: {scores[1]}\n{matches[2]}: {scores[2]}')
+		
 
 	# plt.show(block=False)
 	# plt.pause(3)
-
-	print(plate_number)
 
 	save_path = "SegmentationLogs"
 
@@ -227,4 +280,4 @@ def segment_and_recognize(image):
 
 	plt.close()
 
-	return frameNumber
+	return plate

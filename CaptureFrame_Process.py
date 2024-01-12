@@ -5,7 +5,20 @@ import numpy as np
 import pandas as pd
 import Localization
 import Recognize
-''
+from collections import defaultdict
+
+def combine(init, toAdd):
+    for curr in toAdd:
+        key = curr[0]
+        value = curr[1]
+        if key in init:
+            first = init[key]
+            init[key] = (first + value) / 2
+        else:
+            init[key] = value
+
+    return init
+
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
     In this file, you will define your own CaptureFrame_Process funtion. In this function,
@@ -24,53 +37,40 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     # We use sampling_frequency, based on frames
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
     video = cv2.VideoCapture(file_path)
-    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
 
-    # Initialize variables for saving results
-    plate_data = []
-    coordinates_data = []
-
-    while True:
-        # Capture frame
-        ret, frame = video.read()
-
-        # Break the loop if the video has ended
-        if not ret:
-            break
-
-        # Record frame number and timestamp
-        frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
-        timestamp = frame_number / fps
-        if((frame_number - 1) % sample_frequency != 0): 
-            continue
-
-        # TODO: Implement actual algorithms for Localizing Plates
-        # The plate_detection function should return the coordinates of detected plates
-        firstPlate, secondPlate = Localization.plate_detection(frame)
-        
-        firstPlate_text = Recognize.segment_and_recognize(firstPlate)
-        plate_data.append([firstPlate_text, frame_number, timestamp])
-        secondPlate_text = Recognize.segment_and_recognize(secondPlate)
-        plate_data.append([secondPlate_text, frame_number, timestamp])
-
-    # Save the results to a CSV file using pandas
-    columns = ["License plate", "Frame no.", "Timestamp(seconds)"]
-    coordinateColumns=["#","Category","Video name","x0","y0","x1","y1"]
-    coordinates_df = pd.DataFrame(coordinates_data, columns=coordinateColumns)
     
-    try:
-        existing_df = pd.read_csv(save_path)
-    except FileNotFoundError:
-        existing_df = pd.DataFrame()
+    with open(save_path, "w") as output:        
+        output.write("License plate,Frame no.,Timestamp(seconds)\n")
+        while True:
+            # Capture frame
+            ret, frame = video.read()
 
-    coordinates_df['#'] = range(existing_df.shape[0] + 1, existing_df.shape[0] + coordinates_df.shape[0] + 1)
+            # Break the loop if the video has ended
+            if not ret:
+                break
 
-    # Concatenate the existing DataFrame and the new DataFrame
-    updated_df = pd.concat([existing_df, coordinates_df])
+            # Record frame number and timestamp
+            frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
+            timestamp = frame_number / fps
+            if((frame_number - 1) % sample_frequency != 0): 
+                continue
+            
+            # TODO: Implement actual algorithms for Localizing Plates
+            # The plate_detection function should return the coordinates of detected plates
+            firstPlate, secondPlate = Localization.plate_detection(frame)
+            
+            
+            plate = Recognize.segment_and_recognize(firstPlate)   
+            print(plate)
+            if(plate is not None):
+                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
+                
+            plate = Recognize.segment_and_recognize(secondPlate)   
+            print(plate)
+            if(plate is not None):
+                output.write(f"{plate}, {frame_number}, {timestamp}\n") 
 
-    # Save the updated DataFrame to the CSV file
-    updated_df.to_csv(save_path, index=False)
 
     # Release the video capture object
     video.release()
