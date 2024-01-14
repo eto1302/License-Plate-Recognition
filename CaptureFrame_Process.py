@@ -6,6 +6,7 @@ import pandas as pd
 import Localization
 import Recognize
 from collections import defaultdict
+from skimage.metrics import structural_similarity as ssim
 
 def combine(init, toAdd):
     for curr in toAdd:
@@ -18,6 +19,14 @@ def combine(init, toAdd):
             init[key] = value
 
     return init
+
+def sameScene(frame1, frame2, threshold=0.8):
+    gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+    gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+
+    score, _ = ssim(gray1, gray2, full=True)
+    print(score)
+    return score >= threshold
 
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
@@ -39,6 +48,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     video = cv2.VideoCapture(file_path)
     fps = video.get(cv2.CAP_PROP_FPS)
 
+    prev = None
     
     with open(save_path, "w") as output:        
         output.write("License plate,Frame no.,Timestamp(seconds)\n")
@@ -70,6 +80,10 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
             print(plate)
             if(plate is not None):
                 output.write(f"{plate}, {frame_number}, {timestamp}\n") 
+                
+            if(prev is not None):
+                print(sameScene(prev, frame))
+            prev = frame
 
 
     # Release the video capture object

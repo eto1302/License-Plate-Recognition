@@ -81,7 +81,7 @@ def split_image(image, indices):
 	for index in  indices:
 		if index - prev_index > 0.05 * width:
 			char = image[:, prev_index : index]
-			characters.append(crop_unnecessary_borders(char, 0.05, 1))
+			characters.append(crop_unnecessary_borders(char, 0.05, 10))
 			prev_index = index
 			number_characters_detected += 1
 
@@ -100,7 +100,7 @@ def load_sample_images():
 	for i in range(17):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeLetters/{file}.bmp"
-		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 1)
+		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 10)
 		_, thresholded_character = cv2.threshold(reference_character, 10, 255, cv2.THRESH_BINARY)
 		reference_characters[char] = thresholded_character
 		file += 1
@@ -110,7 +110,7 @@ def load_sample_images():
 	for i in range(17, 27):
 		char = sample_characters[i]
 		path = f"dataset/SameSizeNumbers/{file}.bmp"
-		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 1)
+		reference_character = crop_unnecessary_borders(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY), 0.05, 10)
 		_, thresholded_character = cv2.threshold(reference_character, 10, 255, cv2.THRESH_BINARY)
 		reference_characters[char] = thresholded_character
 		file += 1
