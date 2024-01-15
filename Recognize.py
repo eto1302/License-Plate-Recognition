@@ -218,6 +218,8 @@ def getConfidence(predicted_probabilities):
     return -margin
 
 def removeBiggerRow(image):
+	if(image.shape[0] == 0):
+		return image
 	sum_first_row = np.sum(image[0, :])
 	sum_last_row = np.sum(image[-1, :])
 
@@ -308,8 +310,6 @@ def segment_and_recognize(image):
 
 	if(not validOutput(output)):
 		return "", None
-	# plt.show(block=False)
-	# plt.pause(3)
 
 	save_path = "SegmentationLogs"
 
@@ -320,7 +320,6 @@ def segment_and_recognize(image):
 	else:
 		plt.show()
 
-	plt.close()
+	plt.close('all')
 
 	return plate, output
- 

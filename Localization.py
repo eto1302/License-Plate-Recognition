@@ -169,6 +169,6 @@ def plate_detection(image):
     # # Pause for 5 seconds
     # plt.pause(1)
 
-    plt.close()
+    plt.close('all')
 
     return first, second

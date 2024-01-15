@@ -122,7 +122,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
                 axs[1].set_title('Frame')
                 plt.show()
                 plt.pause(1)
-                plt.close()
+                plt.close('all')
                 print("Scene Change!")
             # prev = frame
 
