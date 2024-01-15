@@ -54,11 +54,11 @@ def crop_unnecessary_borders(image,coeff_low = 0.05,  coeff_high = 0.80):
 			break
 	
 	nonzero_indices = np.nonzero(np.sum(image, axis=0))[0]
-	if len(nonzero_indices) == 0:
+	if len(nonzero_indices) < 3:
 		return image
 	left = nonzero_indices[0]
 	right = nonzero_indices[-2]
-	image = image[:, left:right]
+	image = image[:, left:right + 1]
 	return image
 
 def indices_to_crop(image):
@@ -193,6 +193,42 @@ def reshape_found_characters(found_character):
 
 	return found_character
 
+def validOutput(output):
+    if(len(output) != 8):
+        return False
+    confidences = np.sort([getConfidence(scores) for scores in output])
+    avgConf = np.average(confidences)
+    if(abs(confidences[0] - 1e-6) > 1e-6 or abs(confidences[0]) > 1e-6):
+        return False
+    if(avgConf < 0.15 or confidences[2] < 0.05):
+        return False
+    return True
+
+def getConfidence(predicted_probabilities):    
+    scores = [pred[1] for pred in predicted_probabilities]
+    correct_class_prob = scores[0] + 1e-6
+    incorrect_class_prob = scores[1] + 1e-6
+
+    total_prob = correct_class_prob + incorrect_class_prob
+    normalized_correct_prob = correct_class_prob / total_prob
+    normalized_incorrect_prob = incorrect_class_prob / total_prob
+
+    margin = normalized_correct_prob - normalized_incorrect_prob
+
+    return -margin
+
+def removeBiggerRow(image):
+	sum_first_row = np.sum(image[0, :])
+	sum_last_row = np.sum(image[-1, :])
+
+	if(sum_first_row > sum_last_row):
+		image = image[1:,:]
+	else:
+		image = image[:-1,:]
+
+	return image
+
+
 def segment_and_recognize(image):
 	"""
 	In this file, you will define your own segment_and_recognize function.
@@ -210,7 +246,7 @@ def segment_and_recognize(image):
 		You may need to define other functions.
 	"""
 	if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
-		return None
+		return "", None
 	frameNumber = ""
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -230,8 +266,11 @@ def segment_and_recognize(image):
 
 	indices = indices_to_crop(improved_cropped)
 	plate_characters, number_of_characters = split_image(improved_cropped, indices)
-	if(number_of_characters != 8):
-		return None
+	while(number_of_characters < 8):
+		improved_cropped = removeBiggerRow(improved_cropped)
+
+		indices = indices_to_crop(improved_cropped)
+		plate_characters, number_of_characters = split_image(improved_cropped, indices)
 
 	sample_characters, reference_characters = load_sample_images()
 	
@@ -259,6 +298,7 @@ def segment_and_recognize(image):
 		matches = [rec[0] for rec in recognized]
 		scores = [rec[1] for rec in recognized]
 		plate += matches[0]
+		output.append(recognized)
 		if(plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0):
 			continue
 
@@ -266,6 +306,8 @@ def segment_and_recognize(image):
 		axs[1, i].set_title(f'{matches[0]}: {scores[0]}\n{matches[1]}: {scores[1]}\n{matches[2]}: {scores[2]}')
 		
 
+	if(not validOutput(output)):
+		return "", None
 	# plt.show(block=False)
 	# plt.pause(3)
 
@@ -280,4 +322,5 @@ def segment_and_recognize(image):
 
 	plt.close()
 
-	return plate
+	return plate, output
+ 

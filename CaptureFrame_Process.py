@@ -3,30 +3,48 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import Localization
 import Recognize
 from collections import defaultdict
 from skimage.metrics import structural_similarity as ssim
 
+def getConfidence(predicted_probabilities):    
+    scores = [pred[1] for pred in predicted_probabilities]
+    correct_class_prob = scores[0] + 1e-6
+    incorrect_class_prob = scores[1] + 1e-6
+
+    total_prob = correct_class_prob + incorrect_class_prob
+    normalized_correct_prob = correct_class_prob / total_prob
+    normalized_incorrect_prob = incorrect_class_prob / total_prob
+
+    margin = normalized_correct_prob - normalized_incorrect_prob
+
+    return margin
+
 def combine(init, toAdd):
+    confidence = getConfidence(toAdd)
     for curr in toAdd:
         key = curr[0]
         value = curr[1]
         if key in init:
-            first = init[key]
-            init[key] = (first + value) / 2
+            init[key].append(value / (1 + confidence))
         else:
-            init[key] = value
-
+            init[key] = [value / (1 + confidence)]
     return init
 
-def sameScene(frame1, frame2, threshold=0.8):
-    gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+def sameScene(frame1, frame2, threshold=100):
+    hsv1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
+    hsv2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
 
-    score, _ = ssim(gray1, gray2, full=True)
-    print(score)
-    return score >= threshold
+    avg_hsv1 = np.mean(hsv1, axis=(0, 1))
+    avg_hsv2 = np.mean(hsv2, axis=(0, 1))
+
+    diff_hsv = np.linalg.norm(avg_hsv1 - avg_hsv2)
+
+    result = diff_hsv < threshold
+    print(diff_hsv)
+    return result
 
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
@@ -49,6 +67,8 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     fps = video.get(cv2.CAP_PROP_FPS)
 
     prev = None
+    first = [{},{},{},{},{},{},{},{}]
+    second = [{},{},{},{},{},{},{},{}]
     
     with open(save_path, "w") as output:        
         output.write("License plate,Frame no.,Timestamp(seconds)\n")
@@ -70,20 +90,41 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
             # The plate_detection function should return the coordinates of detected plates
             firstPlate, secondPlate = Localization.plate_detection(frame)
             
-            
-            plate = Recognize.segment_and_recognize(firstPlate)   
-            print(plate)
-            if(plate is not None):
+            plate, firstOut = Recognize.segment_and_recognize(firstPlate)   
+            if(firstOut is not None):
+                for i, curr in enumerate(first):
+                    combine(curr, firstOut[i])
+                # plate = [min(d, key=d.get) for d in first]
+                # print(plate)
+                avgConf = np.average([getConfidence(scores) for scores in firstOut])
+                # print(avgConf)
                 output.write(f"{plate}, {frame_number}, {timestamp}\n")  
                 
-            plate = Recognize.segment_and_recognize(secondPlate)   
-            print(plate)
-            if(plate is not None):
-                output.write(f"{plate}, {frame_number}, {timestamp}\n") 
+            plate, secondOut = Recognize.segment_and_recognize(secondPlate)   
+            if(secondOut is not None):
+                for i, curr in enumerate(second):
+                    combine(curr, secondOut[i])
+                # plate = [min(d, key=d.get) for d in secondOut]
+                # print(plate)
+                avgConf = np.average([getConfidence(scores) for scores in secondOut])
+                # print(avgConf)
+                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
                 
-            if(prev is not None):
-                print(sameScene(prev, frame))
-            prev = frame
+            if(prev is not None and not sameScene(prev, frame)):
+                first = [{},{},{},{},{},{},{},{}]
+                second = [{},{},{},{},{},{},{},{}]
+                fig, axs = plt.subplots(2, figsize=(20, 16))
+    
+                axs[0].imshow(prev, cmap='gray')
+                axs[0].set_title('Previous')
+
+                axs[1].imshow(frame, cmap='gray')
+                axs[1].set_title('Frame')
+                plt.show()
+                plt.pause(1)
+                plt.close()
+                print("Scene Change!")
+            # prev = frame
 
 
     # Release the video capture object
