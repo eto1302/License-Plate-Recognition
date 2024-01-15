@@ -58,7 +58,7 @@ def crop_unnecessary_borders(image,coeff_low = 0.05,  coeff_high = 0.80):
 		return image
 	left = nonzero_indices[0]
 	right = nonzero_indices[-2]
-	image = image[:, left:right + 1]
+	image = image[:, left:right + 3]
 	return image
 
 def indices_to_crop(image):
@@ -86,6 +86,9 @@ def split_image(image, indices):
 			number_characters_detected += 1
 
 	# characters = np.array(characters)
+	if(characters[number_characters_detected - 1].shape[0] == 0):
+		number_characters_detected -= 1
+		characters = characters[:number_characters_detected]
 	return characters, int(number_characters_detected)
 
 def load_sample_images():
@@ -247,7 +250,7 @@ def segment_and_recognize(image):
 	Hints:
 		You may need to define other functions.
 	"""
-	if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
+	if (image is None or not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1)):
 		return "", None
 	frameNumber = ""
 	greyscaleImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -258,17 +261,17 @@ def segment_and_recognize(image):
 
 	# TODO change the coefficient, when the plates are rotated properly
 	# print(np.mean(greyscaleImage))
-	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.65 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY)
+	ret,greyscaleImage = cv2.threshold(greyscaleImage,0.55 * np.mean(greyscaleImage),255,cv2.THRESH_BINARY)
 	greyscaleImage = cv2.bitwise_not(greyscaleImage)
 
-	ret, foreground = cv2.threshold(greyscaleImage, np.mean(greyscaleImage) * 0.5, 255, cv2.THRESH_BINARY)
+	ret, foreground = cv2.threshold(greyscaleImage, 0.5 * np.mean(greyscaleImage), 255, cv2.THRESH_BINARY)
 
 	cropped = crop_unnecessary_borders(foreground)
 	improved_cropped = improveCropped(cropped)
 
 	indices = indices_to_crop(improved_cropped)
 	plate_characters, number_of_characters = split_image(improved_cropped, indices)
-	while(number_of_characters < 8):
+	while(number_of_characters < 8 and improved_cropped.shape[0] > 20):
 		improved_cropped = removeBiggerRow(improved_cropped)
 
 		indices = indices_to_crop(improved_cropped)
@@ -278,16 +281,16 @@ def segment_and_recognize(image):
 	
 	num_cols_first_row = max(number_of_characters, 3)
 
-	fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
+	# fig, axs = plt.subplots(2, num_cols_first_row, figsize=(20, 16))
     
-	axs[0, 0].imshow(greyscaleImage, cmap='gray')
-	axs[0, 0].set_title('Original Image')
+	# axs[0, 0].imshow(greyscaleImage, cmap='gray')
+	# axs[0, 0].set_title('Original Image')
 
-	axs[0, 1].imshow(foreground, cmap='gray')
-	axs[0, 1].set_title('Foreground Image')
+	# axs[0, 1].imshow(foreground, cmap='gray')
+	# axs[0, 1].set_title('Foreground Image')
 
-	axs[0, 2].imshow(improved_cropped, cmap='gray')
-	axs[0, 2].set_title('Improved Foreground Image')
+	# axs[0, 2].imshow(improved_cropped, cmap='gray')
+	# axs[0, 2].set_title('Improved Foreground Image')
 
 	# Second row
 	output = []
@@ -304,22 +307,23 @@ def segment_and_recognize(image):
 		if(plate_characters[i].shape[0] == 0 or plate_characters[i].shape[1] == 0):
 			continue
 
-		axs[1, i].imshow(plate_characters[i])
-		axs[1, i].set_title(f'{matches[0]}: {scores[0]}\n{matches[1]}: {scores[1]}\n{matches[2]}: {scores[2]}')
+		# axs[1, i].imshow(plate_characters[i])
+		# axs[1, i].set_title(f'{matches[0]}: {scores[0]}\n{matches[1]}: {scores[1]}\n{matches[2]}: {scores[2]}')
 		
 
 	if(not validOutput(output)):
+		plt.close('all')
 		return "", None
 
-	save_path = "SegmentationLogs"
+	# save_path = "SegmentationLogs"
 
-	if save_path:
-		if not os.path.exists(save_path):
-			os.makedirs(save_path)
-		plt.savefig(get_next_filename(save_path))
-	else:
-		plt.show()
+	# if save_path:
+	# 	if not os.path.exists(save_path):
+	# 		os.makedirs(save_path)
+	# 	plt.savefig(get_next_filename(save_path))
+	# else:
+	# 	plt.show()
 
-	plt.close('all')
+	# plt.close('all')
 
 	return plate, output

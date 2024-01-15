@@ -10,9 +10,9 @@ import shutil
 # for more information of 'argparse' module, see https://docs.python.org/3/library/argparse.html
 def get_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--file_path', type=str, default='dataset\TrainingSet\Categorie III\Video57_2.avi')
+	parser.add_argument('--file_path', type=str, default='dataset/trainingvideo.avi')
 	parser.add_argument('--output_path', type=str, default='dataset/Output.csv')
-	parser.add_argument('--sample_frequency', type=int, default=12)
+	parser.add_argument('--sample_frequency', type=int, default=6)
 	args = parser.parse_args()
 	return args
 

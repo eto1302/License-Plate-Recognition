@@ -19,16 +19,44 @@ def mostCommonColor(image):
 
 def rotate_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 150)
-    lines = cv2.HoughLines(edges, 1, np.pi / 180, 100)
-    if lines is None:
-        return image
-    dominant_line = lines[0][0]
-    angle = np.degrees(dominant_line[1]) - 90
-    center = tuple(np.array(image.shape[1::-1]) / 2)    
-    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)    
-    rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    return rotated_image
+    
+    edge_thresholds = np.arange(50, 255, 20)
+    line_thresholds = np.arange(100, 50, -20)
+
+    for edge_threshold in edge_thresholds:
+        for line_threshold in line_thresholds:
+            edges = cv2.Canny(gray, 50, edge_threshold)
+            lines = cv2.HoughLines(edges, 1, np.pi / 180, line_threshold)
+
+            if lines is not None:
+                dominant_line = lines[0][0]
+                angle = np.degrees(dominant_line[1]) - 90
+                center = tuple(np.array(image.shape[1::-1]) / 2)    
+                rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)    
+                rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+
+                # plt.subplot(121), plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.title('Original Image')
+                
+                # rho, theta = dominant_line
+                # a = np.cos(theta)
+                # b = np.sin(theta)
+                # x0 = a * rho
+                # y0 = b * rho
+                # x1 = int(x0 + 10 * (-b))
+                # y1 = int(y0 + 10 * (a))
+                # x2 = int(x0 - 10 * (-b))
+                # y2 = int(y0 - 10 * (a))
+                # plt.subplot(122), plt.imshow(cv2.cvtColor(rotated_image, cv2.COLOR_BGR2RGB)), plt.title('Rotated Image')
+                # plt.plot([x1, x2], [y1, y2], color='red', linewidth=2)
+
+                # plt.show()
+                # plt.pause(2)
+                # plt.close()
+
+                return rotated_image
+
+    # print("No lines detected")
+    return None
 
 def improveMask(mask):
     n8 = np.array([     [1, 1, 1],
@@ -141,34 +169,36 @@ def cropPlate(plate):
 def plate_detection(image):
     first, second = twoBiggestPlates(image)
     
-    first = cropPlate(first)
-    second = cropPlate(second)
+    if(first is not None):
+        first = cropPlate(first)
+    if(second is not None):
+        second = cropPlate(second)
 
-    fig, axs = plt.subplots(2, 2, figsize=(20, 8))
+    # fig, axs = plt.subplots(2, 2, figsize=(20, 8))
 
-    axs[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    axs[0, 0].set_title('Original Image')
+    # axs[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    # axs[0, 0].set_title('Original Image')
 
-    axs[1, 0].imshow(cv2.cvtColor(first, cv2.COLOR_BGR2RGB))
-    axs[1, 0].set_title('Largest Cluster')
+    # axs[1, 0].imshow(cv2.cvtColor(first, cv2.COLOR_BGR2RGB))
+    # axs[1, 0].set_title('Largest Cluster')
 
-    axs[1, 1].imshow(cv2.cvtColor(second, cv2.COLOR_BGR2RGB))
-    axs[1, 1].set_title('Second Largest Cluster')
+    # axs[1, 1].imshow(cv2.cvtColor(second, cv2.COLOR_BGR2RGB))
+    # axs[1, 1].set_title('Second Largest Cluster')
 
-    save_path = "LocalizationLogs"
+    # save_path = "LocalizationLogs"
 
-    if save_path:
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        plt.savefig(get_next_filename(save_path))
-    else:
-        plt.show()
+    # if save_path:
+    #     if not os.path.exists(save_path):
+    #         os.makedirs(save_path)
+    #     plt.savefig(get_next_filename(save_path))
+    # else:
+    #     plt.show()
 
-    # plt.show(block=False)
+    # # plt.show(block=False)
 
-    # # Pause for 5 seconds
-    # plt.pause(1)
+    # # # Pause for 5 seconds
+    # # plt.pause(1)
 
-    plt.close('all')
+    # plt.close('all')
 
     return first, second
