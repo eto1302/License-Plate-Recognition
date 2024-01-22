@@ -7,6 +7,33 @@ import matplotlib.pyplot as plt
 import Localization
 import Recognize
 
+def calculate_difference(str1, str2):
+    diff = 0
+    for ind, currChar in enumerate(str1):
+        if(currChar != str2[ind]):
+            diff += 1
+    return diff
+    
+def appendIfSimilar(toAdd, plate):
+    different = len(toAdd)
+    if(different == 0):
+        toAdd.append(plate)
+        return True       
+    
+    for existing_plate in toAdd:
+        if calculate_difference(existing_plate, plate) <= 1:
+            different-=1
+    
+    # print(toAdd, plate, different)
+
+    if (different == 0):
+        toAdd.append(plate)
+        return True
+
+    toAdd.sort(key=lambda x: toAdd.count(x), reverse=True)
+    
+    return False
+
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
     In this file, you will define your own CaptureFrame_Process funtion. In this function,
@@ -23,6 +50,12 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
     video = cv2.VideoCapture(file_path)
     fps = video.get(cv2.CAP_PROP_FPS)    
+    first = []
+    second = []
+    firstFrame = 0
+    firstTimeStamp = 0
+    secondFrame = 0
+    secondTimeStamp = 0
     
     startFrame = 0
     
@@ -46,11 +79,21 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
             plate, firstOut = Recognize.segment_and_recognize(firstPlate)  
             
             if(firstOut is not None):
-                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
+                if(not appendIfSimilar(first, plate)):
+                    output.write(f"{first[0]}, {firstFrame}, {firstTimeStamp}\n")  
+                    first = []
+                    first.append(plate)
+                    firstFrame = frame_number
+                    firstTimeStamp = timestamp
                 
             plate, secondOut = Recognize.segment_and_recognize(secondPlate)   
             
             if(secondOut is not None):
-                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
+                if(not appendIfSimilar(first, plate)):
+                    output.write(f"{second[0]}, {secondFrame}, {secondTimeStamp}\n")  
+                    second = []
+                    second.append(plate)
+                    secondFrame = frame_number
+                    secondTimeStamp = timestamp
                 
     video.release()
