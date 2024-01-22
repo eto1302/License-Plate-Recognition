@@ -3,21 +3,9 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import Localization
 import Recognize
-from collections import defaultdict
-
-def combine(init, toAdd):
-    for curr in toAdd:
-        key = curr[0]
-        value = curr[1]
-        if key in init:
-            first = init[key]
-            init[key] = (first + value) / 2
-        else:
-            init[key] = value
-
-    return init
 
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
@@ -33,44 +21,36 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         3. save_path: final .csv file path
     Output: None
     """
-
-    # We use sampling_frequency, based on frames
-    # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
     video = cv2.VideoCapture(file_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-
+    fps = video.get(cv2.CAP_PROP_FPS)    
+    
+    startFrame = 0
+    
+    video.set(cv2.CAP_PROP_POS_FRAMES, startFrame)
     
     with open(save_path, "w") as output:        
         output.write("License plate,Frame no.,Timestamp(seconds)\n")
         while True:
-            # Capture frame
             ret, frame = video.read()
 
-            # Break the loop if the video has ended
             if not ret:
                 break
 
-            # Record frame number and timestamp
             frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES))
             timestamp = frame_number / fps
             if((frame_number - 1) % sample_frequency != 0): 
                 continue
             
-            # TODO: Implement actual algorithms for Localizing Plates
-            # The plate_detection function should return the coordinates of detected plates
             firstPlate, secondPlate = Localization.plate_detection(frame)
             
+            plate, firstOut = Recognize.segment_and_recognize(firstPlate)  
             
-            plate = Recognize.segment_and_recognize(firstPlate)   
-            print(plate)
-            if(plate is not None):
+            if(firstOut is not None):
                 output.write(f"{plate}, {frame_number}, {timestamp}\n")  
                 
-            plate = Recognize.segment_and_recognize(secondPlate)   
-            print(plate)
-            if(plate is not None):
-                output.write(f"{plate}, {frame_number}, {timestamp}\n") 
-
-
-    # Release the video capture object
+            plate, secondOut = Recognize.segment_and_recognize(secondPlate)   
+            
+            if(secondOut is not None):
+                output.write(f"{plate}, {frame_number}, {timestamp}\n")  
+                
     video.release()
