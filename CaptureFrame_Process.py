@@ -76,21 +76,21 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
             
             firstPlate, secondPlate = Localization.plate_detection(frame)
             
-            plate, firstOut = Recognize.segment_and_recognize(firstPlate)  
-            
+            plate, firstOut = Recognize.segment_and_recognize(firstPlate)
+
             if(firstOut is not None):
                 if(not appendIfSimilar(first, plate)):
-                    output.write(f"{first[0]}, {firstFrame}, {firstTimeStamp}\n")  
+                    output.write(f"{first[0]}, {firstFrame}, {firstTimeStamp}\n")
                     first = []
                     first.append(plate)
                     firstFrame = frame_number
                     firstTimeStamp = timestamp
-                
-            plate, secondOut = Recognize.segment_and_recognize(secondPlate)   
-            
+
+            plate, secondOut = Recognize.segment_and_recognize(secondPlate)
+
             if(secondOut is not None):
                 if(not appendIfSimilar(first, plate)):
-                    output.write(f"{second[0]}, {secondFrame}, {secondTimeStamp}\n")  
+                    output.write(f"{second[0]}, {secondFrame}, {secondTimeStamp}\n")
                     second = []
                     second.append(plate)
                     secondFrame = frame_number

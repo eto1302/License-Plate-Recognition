@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+
 def mostCommonColor(image):
     if not image.any() or (image.any() and image.shape[0] * image.shape[1] == 1):
         return None
@@ -11,7 +12,7 @@ def mostCommonColor(image):
     pixels = hsv.reshape((-1, 3))
 
     mask = pixels[:, 2] >= 100
-    
+
     filtered_pixels = pixels[mask]
 
     return np.mean(filtered_pixels, axis=0).astype(np.uint8)
@@ -19,7 +20,7 @@ def mostCommonColor(image):
 
 def rotate_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
+
     edge_thresholds = np.arange(50, 255, 20)
     line_thresholds = np.arange(100, 50, -20)
 
@@ -31,12 +32,12 @@ def rotate_image(image):
             if lines is not None:
                 dominant_line = lines[0][0]
                 angle = np.degrees(dominant_line[1]) - 90
-                center = tuple(np.array(image.shape[1::-1]) / 2)    
-                rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)    
+                center = tuple(np.array(image.shape[1::-1]) / 2)
+                rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
                 rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
 
                 # plt.subplot(121), plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.title('Original Image')
-                
+
                 # rho, theta = dominant_line
                 # a = np.cos(theta)
                 # b = np.sin(theta)
@@ -58,44 +59,47 @@ def rotate_image(image):
     # print("No lines detected")
     return None
 
+
 def improveMask(mask):
-    n8 = np.array([     [1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1]], np.uint8)
-    n4 = np.array([     [0, 1, 0],
-                        [1, 1, 1],
-                        [0, 1, 0]], np.uint8)
-    
+    n8 = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [1, 1, 1]], np.uint8)
+    n4 = np.array([[0, 1, 0],
+                   [1, 1, 1],
+                   [0, 1, 0]], np.uint8)
+
     # Improve the mask using morphological dilation and erosion    
-    mask = cv2.erode(mask, n4)  
-    mask = cv2.dilate(mask, n8) 
+    mask = cv2.erode(mask, n4)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)  
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)   
-    mask = cv2.dilate(mask, n8)  
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
     mask = cv2.dilate(mask, n8)
-    mask = cv2.dilate(mask, n8)    
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
+    mask = cv2.dilate(mask, n8)
     # Return the improved mask
     return mask
 
+
 # Define a function to create a gaussian kernel
-def gaussianFilter (img, kernelSize, sigma):
+def gaussianFilter(img, kernelSize, sigma):
     result = np.zeros((kernelSize, kernelSize), dtype=float)
     for row in range(kernelSize):
         for col in range(kernelSize):
-            coeff = 1 / (2 * np.pi * sigma**2)
-            exp = -(row**2 + col**2) / (sigma**2)
+            coeff = 1 / (2 * np.pi * sigma ** 2)
+            exp = -(row ** 2 + col ** 2) / (sigma ** 2)
             result[row, col] = coeff * np.exp(exp)
     result /= np.sum(result)
     return cv2.filter2D(img, ddepth=-1, kernel=np.array(result))
+
 
 def get_next_filename(folder):
     i = 1
@@ -104,6 +108,7 @@ def get_next_filename(folder):
         if not os.path.exists(filename):
             return filename
         i += 1
+
 
 def twoBiggestPlates(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -118,13 +123,13 @@ def twoBiggestPlates(image):
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    if contours:            
+    if contours:
         largest_contour = max(contours, key=cv2.contourArea)
 
         largest_contour_mask = np.zeros_like(mask)
         cv2.drawContours(largest_contour_mask, [largest_contour], -1, 255, thickness=cv2.FILLED)
         x1, y1, w1, h1 = cv2.boundingRect(largest_contour)
-        x2, y2, w2, h2 = 0,0,1,1
+        x2, y2, w2, h2 = 0, 0, 1, 1
 
         mask_without_largest = cv2.bitwise_xor(mask, largest_contour_mask)
         contours, _ = cv2.findContours(mask_without_largest, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -136,16 +141,16 @@ def twoBiggestPlates(image):
 
             x2, y2, w2, h2 = cv2.boundingRect(second_largest_contour)
     else:
-        x1, y1, w1, h1 = 0,0,1,1
-        x2, y2, w2, h2 = 0,0,1,1
+        x1, y1, w1, h1 = 0, 0, 1, 1
+        x2, y2, w2, h2 = 0, 0, 1, 1
 
     firstArea = w1 * h1
     secondArea = w2 * h2
 
-    if firstArea < 100:        
-        x1, y1, w1, h1 = 0,0,1,1
+    if firstArea < 100:
+        x1, y1, w1, h1 = 0, 0, 1, 1
     if secondArea < firstArea * 0.75:
-        x2, y2, w2, h2 = 0,0,1,1
+        x2, y2, w2, h2 = 0, 0, 1, 1
 
     cropped_image_largest = image[y1:y1 + h1, x1:x1 + w1]
     cropped_image_second_largest = image[y2:y2 + h2, x2:x2 + w2]
@@ -153,6 +158,7 @@ def twoBiggestPlates(image):
     rotated_cropped_largest = rotate_image(cropped_image_largest)
     rotated_cropped_second_largest = rotate_image(cropped_image_second_largest)
     return rotated_cropped_largest, rotated_cropped_second_largest
+
 
 def cropPlate(plate):
     height, width = plate.shape[:2]
@@ -166,12 +172,13 @@ def cropPlate(plate):
 
     return cropped_image
 
+
 def plate_detection(image):
     first, second = twoBiggestPlates(image)
-    
-    if(first is not None):
+
+    if (first is not None):
         first = cropPlate(first)
-    if(second is not None):
+    if (second is not None):
         second = cropPlate(second)
 
     # fig, axs = plt.subplots(2, 2, figsize=(20, 8))
